@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Encrypted Case Log">
+<defs><linearGradient id="g" x1="0" y1="0" x2="64" y2="64"><stop stop-color="#14b8a6"/><stop offset="1" stop-color="#0f766e"/></linearGradient></defs>
+<rect width="64" height="64" rx="14" fill="url(#g)"/>
+<path d="M20 28v-5a12 12 0 0 1 24 0v5" fill="none" stroke="#04211d" stroke-width="4" stroke-linecap="round"/>
+<rect x="14" y="28" width="36" height="26" rx="6" fill="#04211d" opacity=".85"/>
+<circle cx="32" cy="40" r="4" fill="#14b8a6"/><path d="M32 42v6" stroke="#14b8a6" stroke-width="4" stroke-linecap="round"/>
+</svg>

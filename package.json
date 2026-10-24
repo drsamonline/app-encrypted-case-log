@@ -1,0 +1,7 @@
+{
+  "name": "encrypted-case-log",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Per-patient clinical notes, encrypted on the device. Offline, no account, no server.",
+  "scripts": { "test": "node tests/self-tests.js" }
+}

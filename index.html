@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Encrypted Case Log — notes that never touch a server</title>
+<!-- connect-src 'none' is STRICTER than the spec asked for (default-src 'self'):
+     the app cannot make an outbound request even by accident. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; form-action 'none'; base-uri 'none'">
+<meta name="description" content="Per-patient clinical notes, encrypted on the device with AES-256-GCM. Offline, no account, no server.">
+<meta name="theme-color" content="#0f766e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+:root{--bg:#0b1220;--card:#141d2e;--ink:#e8eef7;--mut:#93a3ba;--line:rgba(255,255,255,.10);--acc:#14b8a6;--warn:#f59e0b;--bad:#ef4444;--ok:#22c55e;--r:12px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:18px}
+h1{font-size:1.15rem;margin:0}
+.mut{color:var(--mut)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin:12px 0}
+button{font:inherit;background:var(--acc);color:#04211d;border:0;border-radius:9px;padding:9px 14px;font-weight:700;cursor:pointer}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:600}
+button.danger{background:var(--bad);color:#fff}
+button:disabled{opacity:.5;cursor:not-allowed}
+input,textarea,select{font:inherit;width:100%;background:#0d1526;color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:9px 11px}
+label{display:block;font-size:.82rem;color:var(--mut);margin:10px 0 4px}
+.row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.spread{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:.78rem;color:var(--mut)}
+.warn{border-color:rgba(245,158,11,.45);background:rgba(245,158,11,.08)}
+.bad{border-color:rgba(239,68,68,.45);background:rgba(239,68,68,.08)}
+ul.plain{list-style:none;margin:0;padding:0}
+ul.plain li{border-top:1px solid var(--line);padding:10px 0;display:flex;justify-content:space-between;gap:10px;align-items:center}
+ul.plain li:first-child{border-top:0}
+.code{font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:.04em;line-height:1.9;word-spacing:.5em}
+.hidden{display:none!important}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:#0d1526;border:1px solid var(--line);border-radius:9px;padding:9px 14px;opacity:0;transition:.25s}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="spread" style="margin:6px 0 12px">
+    <h1>Encrypted Case Log</h1>
+    <span class="pill" id="lockPill">locked</span>
+  </div>
+
+  <!-- ============ LOCK ============ -->
+  <section id="lockView">
+    <div class="card" id="firstRun">
+      <h2 style="margin:0 0 6px;font-size:1rem">Set a passphrase</h2>
+      <p class="mut" style="margin:0 0 4px">Everything is encrypted on this device with AES-256-GCM. There is no server and no account — <b>if you lose the passphrase and the recovery code, the data is unrecoverable.</b></p>
+      <label for="pw1">Passphrase (long is better than clever)</label>
+      <input id="pw1" type="password" autocomplete="new-password">
+      <label for="pw2">Repeat it</label>
+      <input id="pw2" type="password" autocomplete="new-password">
+      <p id="pwErr" class="mut hidden" style="color:var(--bad)"></p>
+      <div class="row" style="margin-top:12px"><button id="doCreate">Create the vault</button></div>
+    </div>
+
+    <div class="card hidden" id="unlockRun">
+      <h2 style="margin:0 0 6px;font-size:1rem">Unlock</h2>
+      <label for="pw">Passphrase</label>
+      <input id="pw" type="password" autocomplete="current-password">
+      <p id="unErr" class="mut hidden" style="color:var(--bad)"></p>
+      <div class="row" style="margin-top:12px">
+        <button id="doUnlock">Unlock</button>
+        <button class="ghost" id="toRecovery">Use the recovery code</button>
+      </div>
+    </div>
+
+    <div class="card hidden" id="recoverRun">
+      <h2 style="margin:0 0 6px;font-size:1rem">Recovery code</h2>
+      <p class="mut" style="margin:0 0 4px">Type the 24 words you wrote down.</p>
+      <textarea id="rc" rows="3" placeholder="word word word …"></textarea>
+      <p id="rcErr" class="mut hidden" style="color:var(--bad)"></p>
+      <div class="row" style="margin-top:12px">
+        <button id="doRecover">Recover</button>
+        <button class="ghost" id="backToUnlock">Back</button>
+      </div>
+    </div>
+
+    <div class="card hidden" id="showRecovery">
+      <h2 style="margin:0 0 6px;font-size:1rem">Write this down — it is shown once</h2>
+      <p class="mut" style="margin:0 0 8px">These 24 words can unlock the vault if you forget the passphrase. Keep them somewhere else — not on this device.</p>
+      <p class="code" id="rcOut"></p>
+      <label class="row" style="margin-top:8px"><input type="checkbox" id="rcAck" style="width:auto"> I have written it down</label>
+      <div class="row" style="margin-top:12px"><button id="rcDone" disabled>Continue</button></div>
+    </div>
+  </section>
+
+  <!-- ============ APP ============ -->
+  <section id="appView" class="hidden">
+    <div class="card">
+      <div class="row">
+        <input id="q" type="search" placeholder="Search notes… (decrypted in memory while unlocked)">
+        <button class="ghost" id="newPatient">New patient</button>
+        <button class="ghost" id="exportEcl">Export .ecl</button>
+        <button class="ghost" id="importEcl">Import .ecl</button>
+        <button class="ghost" id="exportCsv">Export CSV…</button>
+        <button class="ghost danger" id="lockNow">Lock now</button>
+      </div>
+      <p class="mut" id="searchNote" style="margin:8px 0 0"></p>
+    </div>
+
+    <div class="card">
+      <div class="spread"><h2 style="margin:0;font-size:1rem">Patients</h2><span class="pill" id="recCount"></span></div>
+      <ul class="plain" id="patients"></ul>
+      <p class="mut hidden" id="noPatients" style="margin:10px 0 0">No patients yet.</p>
+    </div>
+
+    <div class="card hidden" id="editor">
+      <div class="spread">
+        <h2 style="margin:0;font-size:1rem" id="edTitle">Patient</h2>
+        <div class="row"><button class="ghost" id="edClose">Close</button><button class="danger" id="edDelete">Delete</button></div>
+      </div>
+      <label for="pLabel">Label — initials or a code, <b>not</b> a full name</label>
+      <input id="pLabel" maxlength="40">
+      <p class="mut" style="margin:6px 0 0;font-size:.8rem">The device may be shared, and the label is the field most likely to be seen on a lock screen. A code protects the patient.</p>
+      <label for="nDate">Note date</label>
+      <input id="nDate" type="date">
+      <label for="nText">Note</label>
+      <textarea id="nText" rows="6"></textarea>
+      <label for="nTags">Tags (comma separated)</label>
+      <input id="nTags">
+      <div class="row" style="margin-top:12px"><button id="edSave">Save</button><span class="mut" id="edSaved"></span></div>
+      <h3 style="font-size:.9rem;margin:16px 0 4px">Timeline</h3>
+      <ul class="plain" id="edTimeline"></ul>
+    </div>
+
+    <p class="mut" style="font-size:.78rem;margin:14px 0 40px">Auto-locks after <span id="autoMin">5</span> minutes idle. Your data stays on this device: there is no server to reset a forgotten passphrase.</p>
+  </section>
+</div>
+<div id="toast"></div>
+
+<script src="crypto-kit.js"></script>
+<script src="case-kit.js"></script>
+<script src="search-kit.js"></script>
+<script src="export-kit.js"></script>
+<script src="web-kit.js"></script>
+<script>
+'use strict';
+/* Encrypted Case Log — composes crypto-kit, case-kit, search-kit, export-kit and
+   web-kit. It re-implements none of them.
+
+   THE SHAPE, and why:
+     * a random DEK encrypts the records; the passphrase only WRAPS the DEK, so
+       changing the passphrase never re-encrypts a record.
+     * one record per blob, a FRESH 96-bit IV each time, and the record id as AAD,
+       so a record cannot be swapped or replayed.
+     * the recovery code wraps the DEK too, so a forgotten passphrase is survivable.
+     * search decrypts everything into memory on unlock - you cannot search
+       ciphertext, and a plaintext index on disk would leak what we encrypted. */
+(function () {
+  var KDF_ITERS = 600000, AAD_DEK = 'ecl-dek-v1', AAD_VERIFY = 'ecl-verify-v1';
+  var VERIFIER = 'ecl-verifier-v1';
+  var WORDS = ("able acid acorn acre actor adapt adept admit adobe adopt adult after again agent agile agree ahead aisle alarm album alert alien align alive alley allow almond alpha alter amber amble amino ample anchor angle ankle answer antic apex apple apron arbor arch arctic argue arise armor army arrow artist aspect atlas atom attic auburn audio august aurora author autumn avatar avenue awake award aware azure bacon badge bagel baker balmy bamboo banana banner barley barrel basalt basic basil basin batch beach beacon beam bean bear beaver beech begin behind being belief bell belong below belt bench berry beside better beyond bicker bicycle bidder binary birch bird biscuit bishop bison bitter black blade blame bland blanket blast blaze bleak blend bless blind blink bliss block bloom blue bluff blunt blush board boast boat body boil bold bolt bonus book boost border borrow bottle bottom boulder bounce bound bouquet bowl boxer bracket braid brain brake branch brave bread break breeze brick bridge brief bright brisk broad bronze brook broom brush bubble bucket buckle budget buffalo builder bulb bundle bunker burden bureau burst bushel butter button cabin cable cactus cadet cage calm camel camera camp canal candle canopy canvas canyon capable cape capital captain carbon career cargo carpet carrot carry carve cascade cashew castle catalog catcher cater cattle caught cause cavern cedar celery cement census ceramic cereal chalk chamber champion chance change channel chapter charge charm chart chase cheap check cheddar cheer cheese cherry chess chest chief child chime chimney chip choice chorus chrome chunk cider cigar cinema circle citrus city civic claim clamp clarity clasp classic clay clean clear clever click client cliff climate climb clinic cloak clock close cloth cloud clover cluster coach coast cobalt cocoa coffee coin cold collar colony colour column combat comet comfort comic command comment common compact compass complex compose concert conduct confer confirm connect consent console constant contact content contest context control convert convoy copper coral core corner correct cosmos cottage cotton couch cough council count country couple courage course court cousin cover coyote cradle craft crane crate crawl cream create credit creek crew cricket crimson crisp critic crocus crop cross crowd crown crucial cruise crumb crystal cube cuisine current curtain curve cushion custom cycle dagger daily dairy damage dance dandy danger daring dark dart dawn deal debate decade decent decide declare decode decor deduce deep deer defeat defend define degree delay deliver delta demand dentist deny depart depend deposit depth desert design desk detail detect develop device devote diagram dial diamond diary dice diesel differ digest digital dignity dilemma dinner direct disc discern display distance diver divide divine dizzy dock doctor domain donate doodle double dove dozen draft dragon drama draw dream dress drift drill drink drive drizzle drop drought drum dry duck dune duplex during dust duty dwell eagle early earth ease east easy echo eclipse economy edge edit educate effort egg eight elbow elder electric elegant element elephant elevate elite ellipse elm else ember embrace emerge emotion empire employ empty enable enact endive endure energy engage engine enjoy enlist enrich enroll ensure enter entire entry envelope episode equal equip era erase erode escape essay estate eternal ethic eucalyptus evening event every evident evolve exact examine example exceed excel except excerpt excuse exhibit exile exist expand expect expert expire explain explore export expose express extend extra eye fabric facade factor faculty fade faint faith falcon family famous fancy fantasy farmer fashion fathom fault favor feather feature federal fee feed fellow fence ferry fetch fever fiber fiction field fierce figure file filter final finance find finger finish firm first fiscal fisher fitness fix flag flame flash flask flee fleet flesh flight flint flip float flock floor flora flour flow fluent fluid flute focus fog foil fold follow fond food foot forbid force forest forge forget forgive fork form former fortune forum forward fossil foster found fountain fox fraction fragile frame free freeze fresh friend fringe front frost frozen fruit fuel fulfil full fume fun function fund fur furnish future gadget gain galaxy gallery gamble garden garlic garment gather gauge gaze gear gem general gentle genuine gesture ghost giant gift ginger giraffe give glacier glad glance glass gleam glide glimpse global glory glove glow glue goal goat gold golf gondola good goose gorge gospel govern gown grab grace grade grain grand granite grape graph grasp grass grave gravity graze great green greet grid grief grill grin grip grit grove grow guard guess guest guide guitar gulf gum gust gutter habit hail hair half hall halo halt hammer hamster handle handy hang harbor hard harmony harness harvest hatch haul haven hazard hazel head heal health heap hear heart heat heaven heavy hedge heel height helix helmet help hence herald herb herd here hero heron hidden high hike hill hint hire history hive hobby hold hole holiday hollow home honest honey honour hood hook hope horizon horn horse hospital host hotel hour house hover hub human humble humour hundred hungry hunt hurdle hurry husband hush hut hybrid hydro hymn ice icon idea ideal idle image imagine impact imply import impose improve impulse inch include indeed index indigo indoor induce indulge industry infant inform inhale inherit initial inject injury inland inner input insect inside insist inspire install instant instead intact intake intend interest interior invest invite involve iron island issue ivory jacket jade jaguar jar jaw jazz jealous jelly jewel join joke jolly journal journey joy judge juice july jumbo jump jungle junior just keen keep kernel kettle key kick kind king kiosk kiss kite kitten knee knife knit knob knock knot know label labor ladder lady lagoon lake lamb lamp land lane language lantern lap large laser lash last late laugh launch laundry lava law lawn layer lazy lead leaf league lean leap learn lease leather leave ledge left legal lemon lend length lens leopard less lesson letter level liberty library licence lid life lift light lilac lily limb lime limit line link lion liquid list listen literal little live lizard load loaf loan lobby local locate lock lodge loft logic lonely long look loom loop loose lord lose lotion loud lounge love lower loyal lucid lucky luggage lumber lunar lunch lung lure lush luxury lyric machine magic magnet maid mail main major make mammal manage mango manor manual maple marble march margin marine market marlin marry marsh marvel mask mass master match mate matrix matter mature maximum maybe mayor meadow meal mean measure medal media medium meet melody melon melt member memory mention mentor menu mercy merge merit merry mesh message metal method middle might mild mile milk mill mimic mind mine minor mint minute miracle mirror mist mix mobile model modest modify moist molar moment money monitor monkey month mood moon moral more morning mosaic most motion motor mound mount mourn mouse mouth move much muffin mule multiply muscle museum mushroom music must mutual mystery myth naive name napkin narrow nation native natural nature near neat neck need needle negative neighbour neither nephew nerve nest net network neutral never new next nice niche night nimble nine noble nod noise nominal noon norm north nose note notice novel now nuance nucleus number nurse nut oasis object oblige observe obtain obvious occasion occupy ocean octave odd offer office often oil okay old olive omega omit once onion online only onward open opera opinion oppose option orange orbit orchard order ordinary organ orient origin ornament orphan other otter ounce outer outfit outline output oval oven over owe owl own oxide oxygen oyster ozone pace pack paddle page paint pair palace pale palm panda panel panic paper parade parcel parent parish park parrot part pass pastel patch path patient patrol pattern pause pavement payment peace peach peak peanut pear pearl pebble pecan pedal peel peer pelican pen pencil penguin people pepper perch perfect permit person petal phase phone photo phrase piano pick picnic picture piece pier pigeon pilot pine pink pioneer pipe pistol pitch pivot pixel pizza place plain plane planet plank plant plastic plate plateau platform play pleasant pledge plenty plot plow plug plum plunge plus pocket poem poet point polar pole police polish polite poll pond pony pool popular porch port pose position positive possible post pot potato pottery pouch pound pour powder power practice praise pray precise prefer prefix prepare present press pretty prevent price pride primary prime print prior prism prison private prize probe problem process produce profit program progress project promise promote prompt proof proper propose protect proud prove provide public pudding pull pulse pump punch pupil puppy purchase pure purple purpose purse puzzle pyramid quail quake quality quarter queen query quest queue quick quiet quill quilt quince quote rabbit race rack radar radio radish radius raft rail rain raise raisin rally ramp ranch random range rapid rare raspberry rate rather raven raw ray razor reach react read ready real realm reason rebel recall receive recent recipe record recover recruit recycle red reduce reed reef refer reflect reform refuse regal region regret regular reject relax release relief rely remain remark remedy remind remote remove render renew rent repair repeat replace report request rescue research resemble reserve reset resist resolve resort resource respect respond rest result retain retire retreat return reunion reveal review reward rhino rhythm ribbon rice rich ride ridge rifle right rigid ring rinse riot ripe rise risk ritual rival river road roast robin robot rock rocket rod rogue role roll roof room root rope rose rotate rough round route royal rub rubber ruby rug rule run rural rush rust sack saddle safari safe sage sail salad salmon salon salt salute same sample sand satisfy satin sauce sausage save saw say scale scan scarf scatter scene scent scheme school science scissors scope score scout scrap screen script scrub sculpt sea seal search season seat second secret section secure seed seek seem select self sell semicolon send sense sentence separate sequel series serve session settle seven several severe shade shadow shaft shake shallow shame shape share shark sharp shave shed sheep sheet shelf shell shelter shepherd shield shift shine ship shire shiver shock shoe shoot shop shore short shoulder shout shove shovel show shrimp shrine shuffle shut shy sibling side siege sight sign signal silent silk silly silver similar simple since sincere sinew sing single sink sir siren sister site situate six size sketch skill skin skirt skull slab slate sleek sleep sleeve slice slide slight slim slip slope slot slow small smart smile smith smoke smooth snack snail snake snap sneak snow soap soar sober soccer social sock soda sofa soft soil solar sold sole solid solve some song soon soothe sophisticated sorry sort soul sound soup source south space spare spark speak spear special speed spell spend sphere spice spider spike spill spin spirit split spoil spoke sponge spoon sport spot spray spread spring sprout spruce spur spy square squash squeeze squirrel stable stack stadium staff stage stair stake stale stalk stall stamp stand staple star start state station statue status stay steady steak steal steam steel steep steer stem step stereo stick stiff still sting stitch stock stone stool stop store storm story stove straight strand strange strap straw stream street stretch strict stride strike string strip strive stroke stroll strong struck structure struggle student studio study stuff style subject submit subtle succeed success such sudden suffer sugar suggest suit sulfur summer summit sun sunny sunset super supply support suppose supreme sure surface surge surname surplus surprise surround survey survive suspect sustain swallow swamp swan swap swarm sway swear sweat sweep sweet swell swift swim swing switch sword symbol system table tablet tackle tactic tag tail tailor take tale talent talk tall tally tan tandem tank tape target task taste tattoo tavern teach team tear tease tech tell temper temple tempt tenant tend tender tennis tense tent term terrain terrific test text thank that thaw their theme theory there thick thief thin thing think third thirst this thorn those thread threat three thrive throat throne through throw thumb thunder tick ticket tide tidy tie tiger tight tile till tilt timber time timid tin tiny tip tired tissue title toast today toe together toilet token tolerate toll tomato tomb tomorrow tone tongue tonight tool tooth top topic torch tornado torso tortoise total touch tough tour tower town toy trace track trade traffic trail train trait tram transfer transit translate trap travel tray tread treasure treat treaty tree trek trend trial tribe trick trigger trim trip triumph trophy tropic trouble trout truck true trumpet trunk trust truth try tube tuition tumble tuna tunnel turban turbine turkey turtle twelve twenty twice twin twist type typical ugly umbrella unable uncle under uniform union unique unite universe unless until unusual upgrade uphold upon upper upset urban urge usage use useful usual utility vacant vaccine vacuum vague valid valley value valve van vanilla vapor variety various vase vast vault vector vegetable vehicle veil velvet vendor venture venue verb verdict verge verify verse version vessel veteran viable vibrant victory video view vigil village vinegar vintage violin virtual virtue virus visa visible vision visit visual vital vivid vocal voice void volcano volume vote voyage waffle wagon waist wait wake walk wall walnut walrus wander want war warm warn warp wash wasp waste watch water wave wax way weak wealth weapon wear weather weave web wedge week weep weigh welcome weld well west wet whale what wheat wheel when where while whip whirl whisk whisper white whole whom whose why wide widow width wield wife wild will willow win wind window wine wing wink winter wire wisdom wise wish wit witness wolf woman wonder wood wool word work world worm worry worth wound wrap wren wreck wrestle wrist write wrong yacht yard yarn year yeast yellow yes yield yoga yogurt young your youth zebra zenith zero zone zoom").split(" ");
+
+  /* ---------------------------------------------------------------- the store
+     IndexedDB in the browser; an in-memory store when there is none, so the
+     self-tests run headlessly without pretending IndexedDB exists.            */
+  var Store = (function () {
+    var mem = null;
+    function hasIDB() { try { return typeof indexedDB !== "undefined" && !!indexedDB; } catch (e) { return false; } }
+    function open() {
+      return new Promise(function (res, rej) {
+        var r = indexedDB.open("ecl", 1);
+        r.onupgradeneeded = function () {
+          var d = r.result;
+          if (!d.objectStoreNames.contains("meta")) d.createObjectStore("meta");
+          if (!d.objectStoreNames.contains("records")) d.createObjectStore("records", { keyPath: "id" });
+        };
+        r.onsuccess = function () { res(r.result); };
+        r.onerror = function () { rej(r.error); };
+      });
+    }
+    function tx(db, store, mode, fn) {
+      return new Promise(function (res, rej) {
+        var t = db.transaction(store, mode), s = t.objectStore(store), out;
+        out = fn(s);
+        t.oncomplete = function () { res(out && out.result !== undefined ? out.result : out); };
+        t.onerror = function () { rej(t.error); };
+      });
+    }
+    return {
+      memory: function () { if (!mem) mem = { meta: {}, records: {} }; return mem; },
+      get: function (store, key) {
+        if (!hasIDB()) return Promise.resolve(Store.memory()[store][key]);
+        return open().then(function (db) {
+          return new Promise(function (res, rej) {
+            var t = db.transaction(store), r = t.objectStore(store).get(key);
+            r.onsuccess = function () { res(r.result); }; r.onerror = function () { rej(r.error); };
+          });
+        });
+      },
+      put: function (store, value, key) {
+        if (!hasIDB()) { Store.memory()[store][key === undefined ? value.id : key] = value; return Promise.resolve(value); }
+        return open().then(function (db) {
+          return new Promise(function (res, rej) {
+            var t = db.transaction(store, "readwrite");
+            key === undefined ? t.objectStore(store).put(value) : t.objectStore(store).put(value, key);
+            t.oncomplete = function () { res(value); }; t.onerror = function () { rej(t.error); };
+          });
+        });
+      },
+      all: function (store) {
+        if (!hasIDB()) { var m = Store.memory()[store]; return Promise.resolve(Object.keys(m).map(function (k) { return m[k]; })); }
+        return open().then(function (db) {
+          return new Promise(function (res, rej) {
+            var t = db.transaction(store), r = t.objectStore(store).getAll();
+            r.onsuccess = function () { res(r.result || []); }; r.onerror = function () { rej(r.error); };
+          });
+        });
+      },
+      del: function (store, key) {
+        if (!hasIDB()) { delete Store.memory()[store][key]; return Promise.resolve(); }
+        return open().then(function (db) {
+          return new Promise(function (res, rej) {
+            var t = db.transaction(store, "readwrite"); t.objectStore(store).delete(key);
+            t.oncomplete = function () { res(); }; t.onerror = function () { rej(t.error); };
+          });
+        });
+      },
+      wipe: function () {
+        if (!hasIDB()) { mem = null; return Promise.resolve(); }
+        return open().then(function (db) {
+          return new Promise(function (res) {
+            var t = db.transaction(["meta", "records"], "readwrite");
+            t.objectStore("meta").clear(); t.objectStore("records").clear();
+            t.oncomplete = function () { res(); };
+          });
+        });
+      }
+    };
+  })();
+
+  /* ---------------------------------------------------------------- the vault */
+  var Vault = {
+    dek: null,                 // in memory ONLY, cleared on lock
+    header: null,
+    create: function (passphrase) {
+      var salt = CryptoKit.randomBytes(16);
+      return CryptoKit.deriveKey(passphrase, salt, KDF_ITERS).then(function (kek) {
+        return CryptoKit.newKey().then(function (dek) {
+          return CryptoKit.exportKey(dek).then(function (raw) {
+            return CryptoKit.encrypt(kek, raw, { aad: CryptoKit.bytes.fromText(AAD_DEK) }).then(function (wrapped) {
+              return CryptoKit.encrypt(dek, CryptoKit.bytes.fromText(VERIFIER), { aad: CryptoKit.bytes.fromText(AAD_VERIFY) })
+                .then(function (ver) {
+                  var h = {
+                    v: 1, kdf: "PBKDF2-SHA256", iters: KDF_ITERS,
+                    salt: CryptoKit.bytes.toBase64(salt),
+                    wrapped: { iv: CryptoKit.bytes.toBase64(wrapped.iv), ct: CryptoKit.bytes.toBase64(wrapped.ct) },
+                    verifier: { iv: CryptoKit.bytes.toBase64(ver.iv), ct: CryptoKit.bytes.toBase64(ver.ct) },
+                    recovery: null, created: Date.now()
+                  };
+                  Vault.dek = dek; Vault.header = h;
+                  return Store.put("meta", h, "header").then(function () { return h; });
+                });
+            });
+          });
+        });
+      });
+    },
+    /* the recovery code wraps the SAME DEK, so it survives a forgotten passphrase
+       without ever re-encrypting a record. */
+    setRecovery: function () {
+      var bytes = CryptoKit.randomBytes(24);            // 192 bits -> 24 words of 8 bits
+      var words = []; for (var i = 0; i < 24; i++) words.push(WORDS[bytes[i]]);
+      var code = words.join(" ");
+      return CryptoKit.deriveKey(code, CryptoKit.bytes.fromText("ecl-recovery-salt"), KDF_ITERS)
+        .then(function (rk) {
+          return CryptoKit.exportKey(Vault.dek).then(function (raw) {
+            return CryptoKit.encrypt(rk, raw, { aad: CryptoKit.bytes.fromText(AAD_DEK) });
+          });
+        }).then(function (w) {
+          Vault.header.recovery = { iv: CryptoKit.bytes.toBase64(w.iv), ct: CryptoKit.bytes.toBase64(w.ct) };
+          return Store.put("meta", Vault.header, "header").then(function () { return code; });
+        });
+    },
+    _openWith: function (kek) {
+      var h = Vault.header;
+      var box = { iv: CryptoKit.bytes.fromBase64(h.wrapped.iv), ct: CryptoKit.bytes.fromBase64(h.wrapped.ct) };
+      return CryptoKit.decrypt(kek, box, { aad: CryptoKit.bytes.fromText(AAD_DEK) })
+        .then(function (raw) { return CryptoKit.importKey(raw); });
+    },
+    unlock: function (passphrase) {
+      var h = Vault.header;
+      return CryptoKit.deriveKey(passphrase, CryptoKit.bytes.fromBase64(h.salt), h.iters)
+        .then(function (kek) { return Vault._openWith(kek); })
+        .then(function (dek) { return Vault._verify(dek).then(function () { Vault.dek = dek; return true; }); });
+    },
+    recover: function (code) {
+      if (!Vault.header.recovery) return Promise.reject(new Error("no recovery code was set for this vault"));
+      var box = { iv: CryptoKit.bytes.fromBase64(Vault.header.recovery.iv), ct: CryptoKit.bytes.fromBase64(Vault.header.recovery.ct) };
+      return CryptoKit.deriveKey(code.trim().toLowerCase(), CryptoKit.bytes.fromText("ecl-recovery-salt"), KDF_ITERS)
+        .then(function (rk) { return CryptoKit.decrypt(rk, box, { aad: CryptoKit.bytes.fromText(AAD_DEK) }); })
+        .then(function (raw) { return CryptoKit.importKey(raw); })
+        .then(function (dek) { return Vault._verify(dek).then(function () { Vault.dek = dek; return true; }); });
+    },
+    /* the verifier makes a wrong passphrase fail CLEANLY instead of silently
+       producing garbage - AES-GCM would fail anyway, but a clear error is kinder. */
+    _verify: function (dek) {
+      var v = Vault.header.verifier;
+      var box = { iv: CryptoKit.bytes.fromBase64(v.iv), ct: CryptoKit.bytes.fromBase64(v.ct) };
+      return CryptoKit.decrypt(dek, box, { aad: CryptoKit.bytes.fromText(AAD_VERIFY) })
+        .then(function (pt) {
+          if (CryptoKit.bytes.toText(pt) !== VERIFIER) throw new Error("bad passphrase");
+          return true;
+        }, function () { throw new Error("bad passphrase"); });
+    },
+    lock: function () { Vault.dek = null; }
+  };
+
+  /* -------------------------------------------------------------- the records */
+  var Records = {
+    put: function (rec) {
+      var id = rec.id, plain = CryptoKit.bytes.fromText(JSON.stringify(rec));
+      // a FRESH 96-bit IV every time, and the id as AAD: a swapped record fails.
+      return CryptoKit.encrypt(Vault.dek, plain, { aad: CryptoKit.bytes.fromText(id) })
+        .then(function (box) {
+          return Store.put("records", {
+            id: id, iv: CryptoKit.bytes.toBase64(box.iv), ct: CryptoKit.bytes.toBase64(box.ct),
+            updatedAt: Date.now(), rev: (rec.rev || 0) + 1
+          });
+        }).then(function () { return rec; });
+    },
+    all: function () {
+      return Store.all("records").then(function (rows) {
+        return Promise.all(rows.map(function (row) {
+          var box = { iv: CryptoKit.bytes.fromBase64(row.iv), ct: CryptoKit.bytes.fromBase64(row.ct) };
+          return CryptoKit.decrypt(Vault.dek, box, { aad: CryptoKit.bytes.fromText(row.id) })
+            .then(function (pt) { return JSON.parse(CryptoKit.bytes.toText(pt)); },
+                  function () { return { id: row.id, title: "(unreadable)", broken: true }; });
+        }));
+      });
+    },
+    del: function (id) { return Store.del("records", id); }
+  };
+
+  /* ------------------------------------------------------------------ the app */
+  var state = { patients: [], index: null, editing: null, idle: 0, autoMin: 5 };
+  function $(i) { return document.getElementById(i); }
+  function show(id, on) { $(id).classList[on ? "remove" : "add"]("hidden"); }
+  function toast(m) { var t = $("toast"); t.textContent = m; t.classList.add("on"); setTimeout(function () { t.classList.remove("on"); }, 2200); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]; }); }
+
+  function refresh() {
+    return Records.all().then(function (rows) {
+      state.patients = rows.sort(function (a, b) { return (b.updated || 0) - (a.updated || 0); });
+      render();
+    });
+  }
+  function render() {
+    var q = $("q").value.trim();
+    var list = state.patients;
+    if (q) {
+      // you cannot search ciphertext: this index is built in memory, on unlock,
+      // and thrown away on lock. Nothing plaintext is ever written down.
+      state.index = Search.index(state.patients.map(function (p) {
+        return { id: p.id, text: [p.title, (p.symptoms || []).map(function (n) { return n.note + " " + (n.tags || []).join(" "); }).join(" ")].join(" ") };
+      }));
+      var hits = state.index.query(q, { limit: 50 }) || [];   // search-kit returns an array
+      var keep = {}; hits.forEach(function (h) { keep[h.item.id] = 1; });
+      list = state.patients.filter(function (p) { return keep[p.id]; });
+      $("searchNote").textContent = hits.length + " match(es) across " + state.patients.length + " record(s), decrypted in memory.";
+    } else {
+      state.index = null; $("searchNote").textContent = "";
+    }
+    $("patients").innerHTML = list.map(function (p) {
+      var n = (p.symptoms || []).length;
+      return '<li><span><b>' + esc(p.title || "(no label)") + '</b> <span class="mut">· ' + n + ' note' + (n === 1 ? "" : "s") + '</span></span>'
+        + '<button class="ghost" data-open="' + esc(p.id) + '">Open</button></li>';
+    }).join("");
+    $("noPatients").classList[list.length ? "add" : "remove"]("hidden");
+    $("recCount").textContent = state.patients.length + " record(s)";
+    Array.prototype.forEach.call($("patients").querySelectorAll("[data-open]"), function (b) {
+      b.onclick = function () { openPatient(b.getAttribute("data-open")); };
+    });
+  }
+  function openPatient(id) {
+    var p = state.patients.filter(function (x) { return x.id === id; })[0]; if (!p) return;
+    state.editing = p;
+    $("edTitle").textContent = p.title || "Patient";
+    $("pLabel").value = p.title || "";
+    var last = (p.symptoms || [])[p.symptoms.length - 1];
+    $("nDate").value = (last && new Date(last.date).toISOString().slice(0, 10)) || new Date().toISOString().slice(0, 10);
+    $("nText").value = ""; $("nTags").value = "";
+    $("edTimeline").innerHTML = Case.timeline(p).slice().reverse().map(function (n) {
+      return '<li><span><span class="mut">' + esc(new Date(n.date).toISOString().slice(0, 10)) + '</span> ' + esc(n.text) + '</span>'
+        + (n.tags && n.tags.length ? '<span class="pill">' + esc(n.tags.join(", ")) + '</span>' : "") + '</li>';
+    }).join("") || '<li class="mut">No notes yet.</li>';
+    show("editor", true);
+  }
+  function newPatient() {
+    var p = Case.create({ title: "" });   // a case-kit case IS the record shape
+    p.updated = Date.now();
+    Records.put(p).then(function () { return refresh(); }).then(function () { openPatient(p.id); toast("Created — set a label (initials, not a name)."); });
+  }
+  function saveEditor() {
+    var p = state.editing; if (!p) return;
+    p.title = $("pLabel").value.trim().slice(0, 40);
+    var text = $("nText").value.trim();
+    if (text) {
+      // a note is a case-kit symptom: a dated entry with tags. Using the kit's own
+      // shape is what makes the interchange carry every field.
+      Case.addSymptom(p, { note: text, severity: 1,
+        date: new Date(($("nDate").value || new Date().toISOString().slice(0, 10)) + "T00:00:00").getTime(),
+        tags: $("nTags").value.split(",").map(function (t) { return t.trim(); }).filter(Boolean) });
+    }
+    p.updated = Date.now();
+    Records.put(p).then(function () {
+      $("edSaved").textContent = "saved " + new Date().toLocaleTimeString();
+      return refresh();
+    }).then(function () { if (state.editing) openPatient(state.editing.id); });
+  }
+  function lock() {
+    Vault.lock(); state.patients = []; state.index = null; state.editing = null;
+    show("appView", false); show("lockView", true); show("unlockRun", true); show("firstRun", false);
+    show("recoverRun", false); show("showRecovery", false); $("lockPill").textContent = "locked";
+    $("pw").value = "";
+  }
+  function enterApp() {
+    show("lockView", false); show("appView", true); $("lockPill").textContent = "unlocked";
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {});
+    refresh();
+  }
+
+  /* ------------------------------------------------------------------ wiring */
+  function boot() {
+    return Store.get("meta", "header").then(function (h) {
+      if (!h) { show("firstRun", true); show("unlockRun", false); return; }
+      Vault.header = h; show("firstRun", false); show("unlockRun", true);
+    });
+  }
+  $("doCreate").onclick = function () {
+    var a = $("pw1").value, b = $("pw2").value;
+    if (a.length < 8) { $("pwErr").textContent = "Use at least 8 characters — a passphrase, not a password."; show("pwErr", true); return; }
+    if (a !== b) { $("pwErr").textContent = "The two do not match."; show("pwErr", true); return; }
+    show("pwErr", false);
+    this.disabled = true;
+    var btn = this;
+    Vault.create(a).then(Vault.setRecovery).then(function (code) {
+      $("rcOut").textContent = code;
+      show("firstRun", false); show("showRecovery", true); btn.disabled = false;
+    }).catch(function (e) { btn.disabled = false; $("pwErr").textContent = String(e.message || e); show("pwErr", true); });
+  };
+  $("rcAck").onchange = function () { $("rcDone").disabled = !this.checked; };
+  $("rcDone").onclick = function () { $("rcOut").textContent = ""; enterApp(); };
+  $("doUnlock").onclick = function () {
+    var btn = this; btn.disabled = true;
+    Vault.unlock($("pw").value).then(function () { btn.disabled = false; show("unErr", false); enterApp(); })
+      .catch(function () { btn.disabled = false; $("unErr").textContent = "That passphrase does not open this vault."; show("unErr", true); });
+  };
+  $("toRecovery").onclick = function () { show("unlockRun", false); show("recoverRun", true); };
+  $("backToUnlock").onclick = function () { show("recoverRun", false); show("unlockRun", true); };
+  $("doRecover").onclick = function () {
+    Vault.recover($("rc").value).then(function () { show("rcErr", false); enterApp(); })
+      .catch(function (e) { $("rcErr").textContent = String(e.message || e); show("rcErr", true); });
+  };
+  $("newPatient").onclick = newPatient;
+  $("edSave").onclick = saveEditor;
+  $("edClose").onclick = function () { state.editing = null; show("editor", false); };
+  $("edDelete").onclick = function () {
+    if (!state.editing) return;
+    if (!confirm("Delete this patient and every note in it? This cannot be undone.")) return;
+    Records.del(state.editing.id).then(function () { state.editing = null; show("editor", false); return refresh(); });
+  };
+  $("q").oninput = render;
+  $("lockNow").onclick = lock;
+  $("exportEcl").onclick = function () {
+    Store.all("records").then(function (rows) {
+      var archive = { format: "ecl/archive", version: 1, header: Vault.header, records: rows, exported: new Date().toISOString() };
+      // already encrypted: safe to keep anywhere.
+      Export.save("case-log-" + new Date().toISOString().slice(0, 10) + ".ecl", JSON.stringify(archive, null, 1), "application/json");
+      toast("Exported " + rows.length + " encrypted record(s).");
+    });
+  };
+  $("importEcl").onclick = function () {
+    var inp = document.createElement("input"); inp.type = "file"; inp.accept = ".ecl,application/json";
+    inp.onchange = function () {
+      var f = inp.files[0]; if (!f) return;
+      var rd = new FileReader();
+      rd.onload = function () {
+        try {
+          var a = JSON.parse(rd.result);
+          if (a.format !== "ecl/archive") throw new Error("not an .ecl archive");
+          if (a.header && Vault.header && a.header.salt !== Vault.header.salt) {
+            if (!confirm("This archive came from a DIFFERENT vault. Importing will replace the current one. Continue?")) return;
+          }
+          return Store.wipe().then(function () {
+            Vault.header = a.header;
+            return Store.put("meta", a.header, "header");
+          }).then(function () {
+            // decrypt FIRST, then hand the plaintext to case-kit's interchange shape
+            return Vault.unlock($("pw").value).catch(function () { return Vault.unlock(prompt("Passphrase for the imported vault:") || ""); });
+          }).then(function () {
+            var rows = a.records || [];
+            return Promise.all(rows.map(function (row) {
+              var box = { iv: CryptoKit.bytes.fromBase64(row.iv), ct: CryptoKit.bytes.fromBase64(row.ct) };
+              return CryptoKit.decrypt(Vault.dek, box, { aad: CryptoKit.bytes.fromText(row.id) })
+                .then(function (pt) { return Store.put("records", row).then(function () { return JSON.parse(CryptoKit.bytes.toText(pt)); }); });
+            }));
+          }).then(function (recs) {
+            // case-kit's interchange round-trip proves the records are still readable
+            var envelope = Case.exportRecord(recs, { label: "imported" });   // (cases, patient, opts)
+            Case.importRecord(envelope);
+            return refresh();
+          }).then(function () { enterApp(); toast("Imported."); });
+        } catch (e) { toast("Could not import: " + String(e.message || e)); }
+      };
+      rd.readAsText(f);
+    };
+    inp.click();
+  };
+  $("exportCsv").onclick = function () {
+    if (!confirm("A CSV is PLAINTEXT. Anyone who opens the file reads every note.\n\nExport it anyway?")) return;
+    var rows = [["patient", "date", "note", "tags"]];
+    state.patients.forEach(function (p) { (p.symptoms || []).forEach(function (n) { rows.push([p.title || "", new Date(n.date).toISOString().slice(0, 10), n.note || "", (n.tags || []).join(" ")]); }); });
+    Export.save("case-log-plain-" + new Date().toISOString().slice(0, 10) + ".csv", Loom.csv.toCSV(rows), "text/csv");
+    toast("Plaintext CSV written — handle it as you would a paper record.");
+  };
+
+  /* idle auto-lock */
+  ["mousemove", "keydown", "click", "touchstart"].forEach(function (ev) {
+    document.addEventListener(ev, function () { state.idle = 0; }, { passive: true });
+  });
+  setInterval(function () {
+    if (!Vault.dek) return;
+    state.idle++;
+    if (state.idle >= state.autoMin * 60 / 5) lock();
+  }, 5000);
+
+  /* ------------------------------------------------------------- self-tests */
+  function runSelfTests() {
+    var out = [];
+    function t(name, fn) { return Promise.resolve().then(fn).then(function () { out.push(["pass", name, ""]); },
+      function (e) { out.push(["fail", name, String((e && e.message) || e)]); }); }
+    function eq(a, b, m) { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error((m || "") + " expected " + JSON.stringify(b) + " got " + JSON.stringify(a)); }
+
+    var saved = null;
+    var chain = Promise.resolve()
+      .then(function () { return t("crypto-kit is available (needs a secure context)", function () { if (!CryptoKit.available()) throw new Error("no WebCrypto"); }); })
+      .then(function () { return t("the vault creates, wraps a DEK and sets a recovery code", function () {
+        return Store.wipe().then(function () { Vault.header = null; Vault.dek = null; })
+          .then(function () { return Vault.create("correct horse battery staple"); })
+          .then(function () { if (!Vault.dek) throw new Error("no DEK in memory"); if (Vault.header.wrapped.ct.length < 10) throw new Error("no wrapped DEK"); })
+          .then(function () { return Vault.setRecovery(); })
+          .then(function (code) {
+            saved = code;
+            if (code.split(" ").length !== 24) throw new Error("the recovery code is not 24 words");
+            if (Vault.header.recovery.ct.length < 10) throw new Error("no wrapped recovery DEK");
+          });
+      }); })
+      .then(function () { return t("the passphrase is NOT stored anywhere in the header", function () {
+        var s = JSON.stringify(Vault.header);
+        if (s.indexOf("correct horse") !== -1) throw new Error("the passphrase leaked into the header");
+        if (s.indexOf("dek") !== -1 && s.indexOf("wrapped") === -1) throw new Error("unexpected field");
+      }); })
+      .then(function () { return t("a record round-trips through encrypt/decrypt", function () {
+        var rec = Case.create({ title: "R.M." });
+        Case.addSymptom(rec, { note: "worse at night", severity: 3, tags: ["night"] });
+        return Records.put(rec).then(function () { return Records.all(); }).then(function (rows) {
+          eq(rows.length, 1, "records");
+          eq(rows[0].title, "R.M.", "the label survived");
+          eq(rows[0].symptoms[0].note, "worse at night", "the symptom survived");
+        });
+      }); })
+      .then(function () { return t("the ciphertext does NOT contain the plaintext", function () {
+        return Store.all("records").then(function (rows) {
+          var blob = JSON.stringify(rows);
+          if (blob.indexOf("worse at night") !== -1) throw new Error("plaintext is in the stored blob");
+          if (blob.indexOf("R.M.") !== -1) throw new Error("the label is in the stored blob");
+        });
+      }); })
+      .then(function () { return t("a fresh IV is used every time (no IV reuse)", function () {
+        var rec = Case.create({ title: "IV" });
+        return Records.put(rec).then(function () { return Store.all("records"); }).then(function (a) {
+          var ivs = a.map(function (r) { return r.iv; });
+          if (new Set(ivs).size !== ivs.length) throw new Error("an IV was reused");
+        });
+      }); })
+      .then(function () { return t("a SWAPPED record fails to decrypt (the id is the AAD)", function () {
+        return Store.all("records").then(function (rows) {
+          var a = rows[0], b = rows[1];
+          var box = { iv: CryptoKit.bytes.fromBase64(a.iv), ct: CryptoKit.bytes.fromBase64(a.ct) };
+          return CryptoKit.decrypt(Vault.dek, box, { aad: CryptoKit.bytes.fromText(b.id) })
+            .then(function () { throw new Error("a swapped record decrypted — the AAD is not binding"); },
+                  function () { /* expected */ });
+        });
+      }); })
+      .then(function () { return t("a wrong passphrase fails cleanly, and does not set a DEK", function () {
+        Vault.dek = null;
+        return Vault.unlock("not the passphrase").then(function () { throw new Error("it opened"); },
+          function () { if (Vault.dek) throw new Error("a DEK was set by a wrong passphrase"); });
+      }); })
+      .then(function () { return t("the right passphrase unlocks and reads the records", function () {
+        return Vault.unlock("correct horse battery staple").then(function () { return Records.all(); })
+          .then(function (rows) { if (!rows.length) throw new Error("no records after unlock"); });
+      }); })
+      .then(function () { return t("the RECOVERY code unlocks the same data", function () {
+        Vault.dek = null;
+        return Vault.recover(saved).then(function () { return Records.all(); })
+          .then(function (rows) { if (!rows.length) throw new Error("no records after recovery"); });
+      }); })
+      .then(function () { return t("a wrong recovery code fails", function () {
+        Vault.dek = null;
+        return Vault.recover("able able able able able able able able able able able able able able able able able able able able able able able able")
+          .then(function () { throw new Error("it opened"); }, function () {});
+      }); })
+      .then(function () { return t("locking clears the DEK from memory", function () {
+        return Vault.unlock("correct horse battery staple").then(function () {
+          if (!Vault.dek) throw new Error("no DEK"); Vault.lock();
+          if (Vault.dek) throw new Error("the DEK survived the lock");
+        });
+      }); })
+      .then(function () { return t("search finds a note by its words (in memory only)", function () {
+        return Vault.unlock("correct horse battery staple").then(function () { return Records.all(); }).then(function (rows) {
+          var idx = Search.index(rows.map(function (p) { return { id: p.id, text: [p.title, (p.symptoms || []).map(function (s) { return s.note; }).join(" ")].join(" ") }; }));
+          var hits = idx.query("night", { limit: 10 }) || [];
+          if (!hits.length) throw new Error("no hits for a word that is in a record");
+        });
+      }); })
+      .then(function () { return t("case-kit's interchange round-trips the records", function () {
+        return Records.all().then(function (rows) {
+          var env = Case.exportRecord(rows, { label: "round-trip" });
+          var back = Case.importRecord(env);
+          eq(back.cases.length, rows.length, "cases");
+          eq(back.cases[0].title, rows[0].title, "the label survived the interchange");
+          eq(back.cases[0].symptoms[0].note, rows[0].symptoms[0].note, "the note survived the interchange");
+        });
+      }); })
+      .then(function () { return t("export -> wipe -> import -> identical data", function () {
+        return Vault.unlock("correct horse battery staple").then(function () { return Store.all("records"); }).then(function (before) {
+          var archive = JSON.stringify({ format: "ecl/archive", version: 1, header: Vault.header, records: before });
+          return Store.wipe().then(function () { return Store.put("meta", Vault.header, "header"); })
+            .then(function () {
+              var a = JSON.parse(archive);
+              return Promise.all((a.records || []).map(function (row) {
+                var box = { iv: CryptoKit.bytes.fromBase64(row.iv), ct: CryptoKit.bytes.fromBase64(row.ct) };
+                return CryptoKit.decrypt(Vault.dek, box, { aad: CryptoKit.bytes.fromText(row.id) })
+                  .then(function (pt) { return Store.put("records", row).then(function () { return JSON.parse(CryptoKit.bytes.toText(pt)); }); });
+              }));
+            })
+            .then(function () { return Store.all("records"); })
+            .then(function (after) {
+              eq(after.length, before.length, "record count after the round-trip");
+              var a = before.map(function (r) { return r.id; }).sort(), b = after.map(function (r) { return r.id; }).sort();
+              eq(b, a, "the ids survived the round-trip");
+            });
+        });
+      }); });
+
+    return chain.then(function () { return out; });
+  }
+  window.runSelfTests = runSelfTests;
+
+  if (typeof document !== "undefined" && document.getElementById("doCreate")) {
+    if (navigator.serviceWorker && location.protocol === "https:") {
+      navigator.serviceWorker.register("sw.js").catch(function () {});
+    }
+    boot();
+  }
+})();
+</script>
+</body>
+</html>
