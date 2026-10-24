@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Encrypted Case Log — Per-patient clinical notes, encrypted on the device with AES-256-GCM. Offline, no account, no server.</title>
+<meta name="description" content="Per-patient clinical notes, encrypted on the device with AES-256-GCM. Offline, no account, no server.">
+<meta name="theme-color" content="#0f766e">
+<meta property="og:title" content="Encrypted Case Log — Per-patient clinical notes, encrypted on the device with AES-256-GCM. Offline, no account, no server.">
+<meta property="og:description" content="Per-patient clinical notes, encrypted on the device with AES-256-GCM. Offline, no account, no server.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://drsamonline.github.io/app-encrypted-case-log/">
+<link rel="canonical" href="https://drsamonline.github.io/app-encrypted-case-log/">
+<link rel="icon" href="play/icon.svg" type="image/svg+xml">
+<style>
+:root{--bg:#0b1220;--card:#141d2e;--ink:#e8eef7;--mut:#93a3ba;--line:rgba(255,255,255,.10);--acc:#14b8a6;--r:14px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:900px;margin:0 auto;padding:24px}
+header.hero{padding:56px 0 28px;text-align:center}
+h1{font-size:clamp(1.7rem,4vw,2.6rem);margin:0 0 10px;line-height:1.15}
+.tag{color:var(--acc);font-weight:700;letter-spacing:.04em;text-transform:uppercase;font-size:.8rem}
+.lead{color:var(--mut);font-size:1.06rem;max-width:620px;margin:0 auto}
+.cta{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:26px 0 6px}
+.btn{display:inline-block;border:1px solid var(--line);border-radius:10px;padding:11px 18px;color:var(--ink);text-decoration:none;font-weight:600}
+.btn.primary{background:var(--acc);color:#04211d;border-color:transparent}
+.btn:hover{border-color:var(--acc)}
+section{padding:30px 0;border-top:1px solid var(--line)}
+h2{font-size:1.2rem;margin:0 0 14px}
+ul.features{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+ul.features li{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+ul.features li b{display:block}
+ul.features li span{color:var(--mut);font-size:.95rem}
+figure{margin:0}
+figure img{width:100%;border:1px solid var(--line);border-radius:var(--r);display:block}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.card h3{margin:0 0 6px;font-size:1rem}
+.card p{margin:0;color:var(--mut);font-size:.93rem}
+code{background:rgba(255,255,255,.06);border-radius:5px;padding:1px 5px;font-size:.9em}
+footer{padding:28px 0 60px;color:var(--mut);font-size:.9rem;border-top:1px solid var(--line)}
+a{color:var(--acc)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <p class="tag">Offline · single file · no tracking</p>
+    <h1>Encrypted Case Log</h1>
+    <p class="lead">Per-patient clinical notes, encrypted on the device with AES-256-GCM. Offline, no account, no server.</p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/drsamonline/app-encrypted-case-log/releases/latest/download/app-encrypted-case-log-portable.exe">Download for Windows (.exe)</a>
+      <a class="btn" href="https://github.com/drsamonline/app-encrypted-case-log/releases/latest/download/app-encrypted-case-log.apk">Download for Android (.apk)</a>
+      <a class="btn primary" href="https://drsamonline.github.io/app-encrypted-case-log/play/">Open the live demo →</a>
+      <a class="btn" href="https://github.com/drsamonline/app-encrypted-case-log">Source on GitHub</a>
+    </div>
+  </header>
+
+  <section>
+    <h2>What it does</h2>
+    <ul class="features">
+      <li><b>Offline</b><span>No server, no account, no tracking.</span></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Three ways to run it</h2>
+    <div class="grid">
+      <div class="card"><h3>In the browser</h3><p>Open the <a href="https://drsamonline.github.io/app-encrypted-case-log/play/">live demo</a> — nothing to install.</p></div>
+      <div class="card"><h3>As an app</h3><p>The Windows <code>.exe</code> and the Android <code>.apk</code> are portable: no installer, no admin rights.</p></div>
+      <div class="card"><h3>From the source</h3><p>It is one HTML file. Download it, open it, done — there is no build step.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Privacy</h2>
+    <p>Everything stays on your device. There is no server, no account, and the page
+    forbids outbound requests, so there is nowhere for your data to go. Composed from <code>case-kit</code>, <code>crypto-kit</code>, <code>export-kit</code>, <code>search-kit</code>, <code>web-kit</code>.</p>
+  </section>
+
+  <footer>
+    <p><b>Encrypted Case Log</b> — built by <a href="https://drsamonline.github.io/">Dr Sohil Momin</a>. MIT licensed.
+    Part of the <a href="https://drsamonline.github.io/">drsamonline</a> collection.</p>
+    <p><a href="https://github.com/drsamonline/app-encrypted-case-log/releases">All releases</a> · <a href="https://drsamonline.github.io/app-encrypted-case-log/play/">Live demo</a> · <a href="https://drsamonline.github.io/">All projects</a></p>
+  </footer>
+</div>
+</body>
+</html>

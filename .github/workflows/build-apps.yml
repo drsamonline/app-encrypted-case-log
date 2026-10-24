@@ -1,0 +1,40 @@
+# Build + release + deploy. One push, one pipeline, all from the same commit.
+#
+# The whole pipeline lives in the public app-builder kit, so a fix there reaches
+# every app at once. Do not inline it: a hand-copied version once kept
+# `if: always()` on the release job, so a FAILED build destroyed the release.
+#
+# Every push to main: build the portable EXE and the APK -> publish the rolling
+# `app-latest` release -> deploy the demo to Pages. All three come from the same
+# commit, so the live demo and the released build can never disagree.
+# Pull requests build (and are therefore checked) but never release or deploy.
+
+name: Build + deploy
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: build
+  cancel-in-progress: true
+
+jobs:
+  app:
+    uses: drsamonline/app-builder/.github/workflows/build.yml@main
+    with:
+      app_name: app-encrypted-case-log
+      app_src: docs/play
+      deploy_path: docs
+    permissions:
+      contents: write
+      pages: write
+      id-token: write

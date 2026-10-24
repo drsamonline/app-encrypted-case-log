@@ -1,5 +1,19 @@
 # Encrypted Case Log
 
+<!-- badges:start -->
+[![Landing page](https://img.shields.io/badge/Landing_page-open-14b8a6?logo=githubpages&logoColor=white)](https://drsamonline.github.io/app-encrypted-case-log/)
+[![All projects](https://img.shields.io/badge/All%20projects-hub-14b8a6?logo=githubpages&logoColor=white)](https://drsamonline.github.io/)
+[![Live demo](https://img.shields.io/badge/Live_demo-open-a3e635?logo=html5&logoColor=white)](https://drsamonline.github.io/app-encrypted-case-log/play/)
+[![Source](https://img.shields.io/badge/Source-GitHub-0b1220?logo=github&logoColor=white)](https://github.com/drsamonline/app-encrypted-case-log)
+
+[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+[![Dependencies](https://img.shields.io/badge/Dependencies-none-success)](https://github.com/drsamonline/app-encrypted-case-log)
+[![Offline ready](https://img.shields.io/badge/Offline-ready-success)](https://github.com/drsamonline/app-encrypted-case-log)
+[![Downloads](https://img.shields.io/github/downloads/drsamonline/app-encrypted-case-log/total)](https://github.com/drsamonline/app-encrypted-case-log/releases)
+[![Last commit](https://img.shields.io/github/last-commit/drsamonline/app-encrypted-case-log)](https://github.com/drsamonline/app-encrypted-case-log/commits/main)
+<!-- badges:end -->
+
+
 **Per-patient clinical notes, encrypted on the device. Offline. No account, no server.**
 
 Everything lives on the device, encrypted at rest with **AES-256-GCM** (Web Crypto), in
