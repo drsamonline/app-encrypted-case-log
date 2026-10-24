@@ -1,5 +1,12 @@
 # Encrypted Case Log
 
+<!-- shot:start -->
+
+![Screenshot](shot.png)
+
+<!-- shot:end -->
+
+
 <!-- badges:start -->
 [![Landing page](https://img.shields.io/badge/Landing_page-open-14b8a6?logo=githubpages&logoColor=white)](https://drsamonline.github.io/app-encrypted-case-log/)
 [![All projects](https://img.shields.io/badge/All%20projects-hub-14b8a6?logo=githubpages&logoColor=white)](https://drsamonline.github.io/)
