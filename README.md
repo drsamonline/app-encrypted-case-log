@@ -2,7 +2,7 @@
 
 <!-- shot:start -->
 
-![Screenshot](shot.png)
+![Screenshot](docs/shot.png)
 
 <!-- shot:end -->
 
