@@ -13,7 +13,7 @@
 [![Live demo](https://img.shields.io/badge/Live_demo-open-a3e635?logo=html5&logoColor=white)](https://drsamonline.github.io/app-encrypted-case-log/play/)
 [![Source](https://img.shields.io/badge/Source-GitHub-0b1220?logo=github&logoColor=white)](https://github.com/drsamonline/app-encrypted-case-log)
 
-[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+[![License](https://img.shields.io/badge/License-PolyForm_Noncommercial_1.0.0-blue)](LICENSE)
 [![Dependencies](https://img.shields.io/badge/Dependencies-none-success)](https://github.com/drsamonline/app-encrypted-case-log)
 [![Offline ready](https://img.shields.io/badge/Offline-ready-success)](https://github.com/drsamonline/app-encrypted-case-log)
 [![Downloads](https://img.shields.io/github/downloads/drsamonline/app-encrypted-case-log/total)](https://github.com/drsamonline/app-encrypted-case-log/releases)
@@ -90,4 +90,4 @@ evicted.
 
 ## Licence
 
-MIT — see `LICENSE`. © 2026 Dr Sohil Momin.
+PolyForm Noncommercial — see `LICENSE`. © 2026 Dr Sohil Momin.
