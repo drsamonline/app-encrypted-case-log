@@ -48,6 +48,23 @@ globalThis.prompt = () => '';
 globalThis.alert = () => {};
 if (typeof globalThis.FileReader === 'undefined') globalThis.FileReader = function () {};
 
+/* localStorage: the app PREFERS IndexedDB and falls back to an in-memory store when it is
+ * absent - but it reads localStorage first to remember small preferences, and there is no
+ * localStorage in Node. The suite therefore died with `localStorage is not defined` before
+ * a single test ran, which is why this repository's CI has been red on every run. A Map
+ * behind the standard four methods is enough; the app never depends on persistence here. */
+if (typeof globalThis.localStorage === 'undefined') {
+  const store = new Map();
+  globalThis.localStorage = {
+    getItem: (k) => (store.has(String(k)) ? store.get(String(k)) : null),
+    setItem: (k, v) => { store.set(String(k), String(v)); },
+    removeItem: (k) => { store.delete(String(k)); },
+    clear: () => { store.clear(); },
+    key: (i) => Array.from(store.keys())[i] ?? null,
+    get length() { return store.size; }
+  };
+}
+
 /* ---- load the kits the app composes, then the app ---- */
 const dir = path.dirname(file);
 for (const kit of ['crypto-kit.js', 'case-kit.js', 'search-kit.js', 'export-kit.js', 'web-kit.js']) {
