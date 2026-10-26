@@ -42,6 +42,12 @@ globalThis.document = {
   body: stubEl()
 };
 globalThis.window = globalThis;
+/* window IS globalThis in this harness, and Node's globalThis has no addEventListener -
+ * so the app's `window.addEventListener("error", ...)` threw before a single test ran.
+ * These three are what the app actually calls; nothing else is stubbed speculatively. */
+globalThis.addEventListener = () => {};
+globalThis.removeEventListener = () => {};
+globalThis.dispatchEvent = () => true;
 globalThis.navigator = globalThis.navigator || {};
 globalThis.confirm = () => true;
 globalThis.prompt = () => '';
