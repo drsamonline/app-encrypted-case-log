@@ -9,7 +9,7 @@
  *   Case.summary(c);
  *
  * No patient-identifying data is modelled — the app owns that, and should keep
- * it local. MIT License. (c) 2026 Dr Sohil Momin.
+ * it local. PolyForm Noncommercial 1.0.0. (c) 2026 Dr Sohil Momin.
  */
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory();

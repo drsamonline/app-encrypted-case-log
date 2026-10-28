@@ -12,7 +12,7 @@
  * Requires a secure context (https or localhost) for Web Crypto. GitHub Pages is
  * https, so deployed apps are fine.
  *
- * MIT License. (c) 2026 Dr Sohil Momin.
+ * PolyForm Noncommercial 1.0.0. (c) 2026 Dr Sohil Momin.
  */
 (function (root) {
   "use strict";
