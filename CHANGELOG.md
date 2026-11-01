@@ -44,7 +44,8 @@ in the footer; this file is the long form.
 
 ### Language, icons and releases
 
-- **i18n-kit.js**: English, हिन्दी, ગુજરાતી, मराठी, bundled — no translation service.
+- **Four languages in the app's own script**: English, हिन्दी, ગુજરાતી, मराठी — no translation
+  service, no network, and no new kit (kits are one-way here).
 - **The icon is redrawn** in the app's own palette, and the PWA set (192, 512, maskable 512,
   apple-touch, favicon.ico) is rendered locally by `scripts/icons.py`.
 - **Manifest finished**: `id`, `lang`, `categories`, `screenshots`, `shortcuts`,

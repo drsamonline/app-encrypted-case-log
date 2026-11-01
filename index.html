@@ -320,7 +320,6 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
 <script src="search-kit.js"></script>
 <script src="export-kit.js"></script>
 <script src="web-kit.js"></script>
-<script src="i18n-kit.js"></script>
 <script>
 'use strict';
 /* Encrypted Case Log — composes crypto-kit, case-kit, search-kit, export-kit and
@@ -690,6 +689,112 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
   };
 
   /* ------------------------------------------------------------------ the app */
+  /* ------------------------------------------------------------ the languages
+     These dictionaries are this app's own strings — app data, not a shared kit.
+     Nothing here is fetched: the file IS the translation. Anything without a
+     translation falls back to English rather than pretending. */
+  var I18N = {
+    en: {
+      patients: "Patients", timeline: "Timeline", earlier: "Earlier versions",
+      severityOver: "Severity over time", settings: "Settings",
+      newPatient: "New patient", exportEcl: "Export .ecl", importEcl: "Import .ecl",
+      exportCsv: "Export CSV…", importCsv: "Import CSV…", lockNow: "Lock now",
+      clear: "Clear", save: "Save", close: "Close", del: "Delete", print: "Print",
+      searchPh: "Search notes… (decrypted in memory while unlocked)",
+      noPatients: "No patients yet.",
+      appearance: "Appearance", locking: "Locking", passphrase: "Passphrase and recovery",
+      decoy: "Decoy vault", storage: "Storage and health",
+      textSize: "Text size", language: "Language", autoLock: "Auto-lock after (minutes)",
+      redact: "Redact names and notes on screen (for a shared display)",
+      lockHide: "Lock as soon as the tab is hidden",
+      newPass: "New passphrase", repeat: "Repeat it",
+      changePass: "Change passphrase", newRecovery: "New recovery code",
+      verifyAll: "Verify every record", runTests: "Run the self-tests",
+      backup: "Export .ecl now", records: "record(s)", notes: "note(s)",
+      open: "Open", allTags: "All tags", sev: "sev"
+    },
+    hi: {
+      patients: "रोगी", timeline: "समयरेखा", earlier: "पुराने संस्करण",
+      severityOver: "समय के साथ गंभीरता", settings: "सेटिंग्स",
+      newPatient: "नया रोगी", exportEcl: ".ecl निर्यात करें", importEcl: ".ecl आयात करें",
+      exportCsv: "CSV निर्यात करें…", importCsv: "CSV आयात करें…", lockNow: "अभी लॉक करें",
+      clear: "साफ़ करें", save: "सहेजें", close: "बंद करें", del: "हटाएँ", print: "छापें",
+      searchPh: "टिप्पणियाँ खोजें… (अनलॉक रहते हुए मेमोरी में डिक्रिप्ट)",
+      noPatients: "अभी कोई रोगी नहीं।",
+      appearance: "रूप", locking: "लॉकिंग", passphrase: "पासफ़्रेज़ और रिकवरी",
+      decoy: "छद्म वॉल्ट", storage: "संग्रहण और स्वास्थ्य",
+      textSize: "पाठ का आकार", language: "भाषा", autoLock: "स्वतः लॉक (मिनट में)",
+      redact: "साझा स्क्रीन के लिए नाम और टिप्पणियाँ छिपाएँ",
+      lockHide: "टैब छिपते ही लॉक करें",
+      newPass: "नया पासफ़्रेज़", repeat: "दोहराएँ",
+      changePass: "पासफ़्रेज़ बदलें", newRecovery: "नया रिकवरी कोड",
+      verifyAll: "हर रिकॉर्ड जाँचें", runTests: "स्वयं-परीक्षण चलाएँ",
+      backup: "अभी .ecl निर्यात करें", records: "रिकॉर्ड", notes: "टिप्पणियाँ",
+      open: "खोलें", allTags: "सभी टैग", sev: "गंभीरता"
+    },
+    gu: {
+      patients: "દર્દીઓ", timeline: "સમયરેખા", earlier: "જૂની આવૃત્તિઓ",
+      severityOver: "સમય સાથે તીવ્રતા", settings: "સેટિંગ્સ",
+      newPatient: "નવો દર્દી", exportEcl: ".ecl નિકાસ કરો", importEcl: ".ecl આયાત કરો",
+      exportCsv: "CSV નિકાસ કરો…", importCsv: "CSV આયાત કરો…", lockNow: "હવે લૉક કરો",
+      clear: "સાફ કરો", save: "સાચવો", close: "બંધ કરો", del: "દૂર કરો", print: "છાપો",
+      searchPh: "નોંધ શોધો… (અનલૉક હોય ત્યારે મેમરીમાં ડિક્રિપ્ટ)",
+      noPatients: "હજી કોઈ દર્દી નથી.",
+      appearance: "દેખાવ", locking: "લૉકિંગ", passphrase: "પાસફ્રેઝ અને રિકવરી",
+      decoy: "છદ્મ વૉલ્ટ", storage: "સંગ્રહ અને આરોગ્ય",
+      textSize: "લખાણનું માપ", language: "ભાષા", autoLock: "સ્વયં લૉક (મિનિટ)",
+      redact: "વહેંચાયેલ સ્ક્રીન માટે નામ અને નોંધ છુપાવો",
+      lockHide: "ટૅબ છુપાય કે તરત લૉક કરો",
+      newPass: "નવો પાસફ્રેઝ", repeat: "પુનરાવર્તન",
+      changePass: "પાસફ્રેઝ બદલો", newRecovery: "નવો રિકવરી કોડ",
+      verifyAll: "દરેક રેકોર્ડ ચકાસો", runTests: "સ્વયં-પરીક્ષણ ચલાવો",
+      backup: "હવે .ecl નિકાસ કરો", records: "રેકોર્ડ", notes: "નોંધ",
+      open: "ખોલો", allTags: "બધા ટૅગ", sev: "તીવ્રતા"
+    },
+    mr: {
+      patients: "रुग्ण", timeline: "कालरेषा", earlier: "जुनी आवृत्ती",
+      severityOver: "कालानुसार तीव्रता", settings: "सेटिंग्ज",
+      newPatient: "नवीन रुग्ण", exportEcl: ".ecl निर्यात करा", importEcl: ".ecl आयात करा",
+      exportCsv: "CSV निर्यात करा…", importCsv: "CSV आयात करा…", lockNow: "आता लॉक करा",
+      clear: "साफ करा", save: "जतन करा", close: "बंद करा", del: "हटवा", print: "छापा",
+      searchPh: "नोंदी शोधा… (अनलॉक असताना मेमरीत डिक्रिप्ट)",
+      noPatients: "अजून कोणतेही रुग्ण नाहीत.",
+      appearance: "स्वरूप", locking: "लॉकिंग", passphrase: "पासफ्रेज आणि रिकव्हरी",
+      decoy: "छद्म व्हॉल्ट", storage: "साठवण आणि आरोग्य",
+      textSize: "मजकुराचा आकार", language: "भाषा", autoLock: "स्वयं लॉक (मिनिटे)",
+      redact: "सामायिक स्क्रीनसाठी नावे आणि नोंदी लपवा",
+      lockHide: "टॅब लपताच लॉक करा",
+      newPass: "नवीन पासफ्रेज", repeat: "पुन्हा लिहा",
+      changePass: "पासफ्रेज बदला", newRecovery: "नवीन रिकव्हरी कोड",
+      verifyAll: "प्रत्येक रेकॉर्ड तपासा", runTests: "स्वयं-चाचण्या चालवा",
+      backup: "आता .ecl निर्यात करा", records: "रेकॉर्ड", notes: "नोंदी",
+      open: "उघडा", allTags: "सर्व टॅग", sev: "तीव्रता"
+    }
+  };
+
+  /* a string in the current language, falling back to English */
+  function t(k) {
+    var d = I18N[state.settings.lang] || I18N.en;
+    return d[k] || I18N.en[k] || k;
+  }
+
+  function i18nApply(lang) {
+    var d = I18N[lang] || I18N.en, base = I18N.en, k, els, i, j;
+    els = document.querySelectorAll("[data-i18n]");
+    for (i = 0; i < els.length; i++) {
+      k = els[i].getAttribute("data-i18n");
+      els[i].textContent = d[k] || base[k] || els[i].textContent;
+    }
+    els = document.querySelectorAll("[data-i18n-ph]");
+    for (j = 0; j < els.length; j++) {
+      k = els[j].getAttribute("data-i18n-ph");
+      els[j].setAttribute("placeholder", d[k] || base[k] || "");
+    }
+    if (document.documentElement && document.documentElement.setAttribute) {
+      document.documentElement.setAttribute("lang", lang || "en");
+    }
+  }
+
   var DEFAULT_SETTINGS = { autoMin: 5, lockOnHide: false, wipeAfter: 5, lang: "en", fontScale: 1, redact: false, backupEvery: 10 };
   function defaults(o) {
     var r = {}, k;
@@ -744,7 +849,8 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
     var lh = $("setLockHide"); if (lh) lh.checked = !!state.settings.lockOnHide;
     var wa = $("setWipe"); if (wa) wa.value = state.settings.wipeAfter;
     var fs = $("setFont"); if (fs) fs.value = String(f);
-    if (window.ECL_I18N) window.ECL_I18N.apply(state.settings.lang || "en");
+    i18nApply(state.settings.lang || "en");
+    if (state.patients.length) render();
   }
 
   function byUpdated(a, b) { return (b.updated || 0) - (a.updated || 0); }
@@ -807,20 +913,20 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
       var n = (p.symptoms || []).length;
       var sev = (p.symptoms || []).reduce(function (m, x) { return Math.max(m, x.severity || 1); }, 1);
       var label = red ? '<span class="redactable">' + esc(p.title || "(no label)") + '</span>' : esc(p.title || "(no label)");
-      return '<li><span><b>' + label + '</b> <span class="mut">· ' + n + ' note' + (n === 1 ? "" : "s") + '</span></span>'
-        + '<span class="row"><span class="pill sev s' + sev + '">sev ' + sev + '</span>'
-        + '<button class="ghost" data-open="' + esc(p.id) + '">Open</button></span></li>';
+      return '<li><span><b>' + label + '</b> <span class="mut">· ' + n + ' ' + esc(t("notes")) + '</span></span>'
+        + '<span class="row"><span class="pill sev s' + sev + '">' + esc(t("sev")) + ' ' + sev + '</span>'
+        + '<button class="ghost" data-open="' + esc(p.id) + '">' + esc(t("open")) + '</button></span></li>';
     }).join("");
     $("noPatients").classList[list.length ? "add" : "remove"]("hidden");
-    $("recCount").textContent = state.patients.length + " record(s)";
+    $("recCount").textContent = state.patients.length + " " + t("records");
 
     /* the tag filter offers only tags that exist, so it cannot be a dead end */
     var tags = {}; state.patients.forEach(function (p) { patientTags(p).forEach(function (t) { tags[t] = 1; }); });
     var sel = $("tagFilter");
     if (sel) {
       var names = Object.keys(tags).sort();
-      sel.innerHTML = '<option value="">All tags</option>' + names.map(function (t) {
-        return '<option value="' + esc(t) + '"' + (t === state.tagFilter ? " selected" : "") + '>' + esc(t) + '</option>';
+      sel.innerHTML = '<option value="">' + esc(t("allTags")) + '</option>' + names.map(function (tag) {
+        return '<option value="' + esc(tag) + '"' + (tag === state.tagFilter ? " selected" : "") + '>' + esc(tag) + '</option>';
       }).join("");
     }
     Array.prototype.forEach.call($("patients").querySelectorAll("[data-open]"), function (b) {

@@ -5,8 +5,8 @@
  * old cache and a shipped release becomes invisible — which is exactly how a green
  * deploy once looked like nothing had happened. Assets stay cache-first, but a
  * background refresh keeps them from going stale. Bump CACHE on every release. */
-var CACHE = "ecl-v4";
-var ASSETS = ["index.html", "crypto-kit.js", "case-kit.js", "search-kit.js", "export-kit.js", "web-kit.js", "i18n-kit.js", "manifest.webmanifest", "icon.svg",
+var CACHE = "ecl-v5";
+var ASSETS = ["index.html", "crypto-kit.js", "case-kit.js", "search-kit.js", "export-kit.js", "web-kit.js", "manifest.webmanifest", "icon.svg",
   "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png",
   "icons/apple-touch-icon.png", "icons/favicon.ico", "icons/favicon-32.png"];
 
