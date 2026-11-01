@@ -30,7 +30,6 @@ BADGES = [
     ("offline", "offline", "no network", INK),
     ("tests", "tests", "21 passing", GREEN),
     ("deps", "deps", "0 runtime", PLUM),
-    ("langs", "languages", "4 bundled", BLUE),
     ("licence", "licence", "PolyForm NC 1.0.0", BRASS),
 ]
 

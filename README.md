@@ -5,7 +5,6 @@
 ![Offline](docs/assets/badge-offline.svg)
 ![Tests](docs/assets/badge-tests.svg)
 ![Dependencies](docs/assets/badge-deps.svg)
-![Languages](docs/assets/badge-langs.svg)
 [![Licence](docs/assets/badge-licence.svg)](LICENSE)
 
 **Per-patient clinical notes, encrypted on the device. Offline. No account, no server.**
@@ -39,8 +38,9 @@ fetch an image service to describe itself.
 
 Built with Forge, composing five shared kits: `crypto-kit` (AES-GCM, PBKDF2, key wrap),
 `case-kit` (the record shape), `search-kit` (ranked search), `export-kit` (save a file) and
-`web-kit` (shell, storage runtime, PWA). The four language dictionaries are the app's own
-strings and live in the app's script — app data, not a kit.
+`web-kit` (shell, storage runtime, PWA). The app is English only, deliberately: it is a
+clinical tool used in one language, and a half-translated record screen is worse than an
+English one.
 
 ## Run it
 
@@ -135,11 +135,7 @@ fallback) and asks the registration to update on every load, so a shipped releas
 hidden behind a stale cache. The footer prints a **version and build stamp**, so "am I on
 the new one?" is answerable from the page itself.
 
-## Languages and keyboard
-
-English, **हिन्दी, ગુજરાતી and मराठी** are bundled as local dictionaries inside the app's own
-script — no translation service, no network. Anything without a translation falls back to
-English rather than pretending.
+## Keyboard and type
 
 `N` new patient · `/` search · `Ctrl`+`S` save · `L` lock · `S` settings · `Esc` close ·
 `?` the list. Text size, and a **redaction curtain** for a shared screen, live in Settings.

@@ -16,7 +16,7 @@
 <style>
 :root{--bg:#0b1220;--card:#141d2e;--ink:#e8eef7;--mut:#93a3ba;--line:rgba(255,255,255,.10);--acc:#14b8a6;--warn:#f59e0b;--bad:#ef4444;--ok:#22c55e;--field:#0d1526;--r:12px}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:calc(15px * var(--scale,1))}
 .wrap{max-width:980px;margin:0 auto;padding:18px}
 h1{font-size:1.15rem;margin:0}
 .mut{color:var(--mut)}
@@ -49,8 +49,6 @@ ul.plain li:first-child{border-top:0}
 /* the redaction curtain: for a shared screen, not for a shared file */
 body.redact .redactable,body.redact #edTimeline li span,body.redact #edTitle,
 body.redact #pLabel,body.redact #nText,body.redact #nTags{filter:blur(5px);user-select:none}
-body.big-text{font-size:18px}
-body.big-text .wrap{max-width:1040px}
 #edHistory li,#healthOut,#storageOut{white-space:pre-wrap}
 #healthOut{font-size:.8rem;max-height:220px;overflow:auto;margin:8px 0 0}
 fieldset.settings{border:1px solid var(--line);border-radius:var(--r);margin:0 0 12px;padding:12px 14px}
@@ -63,12 +61,15 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
 /* print: the record, and only the record — the offline way to hand it over */
 @media print{
   body{background:#fff!important;color:#000!important}
-  #lockView,#demoBanner,header,.no-print,.card:not(#editor),#toast{display:none!important}
+  #lockView,#demoBanner,header,.no-print,#themeBtn,#lockPill,.card:not(#editor),#toast,
+  .wrap > .spread,#appView > p{display:none!important}
   .wrap{max-width:none;padding:0}
   #appView{display:block!important}
   #editor{display:block!important;border:0;padding:0}
   #editor button{display:none!important}
   #edTimeline li{page-break-inside:avoid}
+  #editor:before{content:"Encrypted Case Log — printed record";display:block;font-size:.7rem;
+    letter-spacing:.12em;text-transform:uppercase;color:#555;margin-bottom:10px}
   a[href]:after{content:""}
 }
 </style>
@@ -84,50 +85,50 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
   </div>
 
   <div class="card warn hidden" id="demoBanner" style="margin:0 0 12px">
-    <b data-i18n="demoTitle">Demo vault.</b> <span class="mut">Sample records, held in memory only — nothing here is saved, and nothing is written to this device.</span>
+    <b>Demo vault.</b> <span class="mut">Sample records, held in memory only — nothing here is saved, and nothing is written to this device.</span>
   </div>
 
   <!-- ============ LOCK ============ -->
   <section id="lockView">
     <div class="card" id="firstRun">
-      <h2 style="margin:0 0 6px;font-size:1rem" data-i18n="setPass">Set a passphrase</h2>
-      <p class="mut" style="margin:0 0 4px" data-i18n="setPassNote">Everything is encrypted on this device with AES-256-GCM. There is no server and no account — <b>if you lose the passphrase and the recovery code, the data is unrecoverable.</b></p>
-      <label for="pw1" data-i18n="passphrase">Passphrase (long is better than clever)</label>
+      <h2 style="margin:0 0 6px;font-size:1rem">Set a passphrase</h2>
+      <p class="mut" style="margin:0 0 4px">Everything is encrypted on this device with AES-256-GCM. There is no server and no account — <b>if you lose the passphrase and the recovery code, the data is unrecoverable.</b></p>
+      <label for="pw1">Passphrase (long is better than clever)</label>
       <input id="pw1" type="password" autocomplete="new-password">
-      <label for="pw2" data-i18n="repeat">Repeat it</label>
+      <label for="pw2">Repeat it</label>
       <input id="pw2" type="password" autocomplete="new-password">
       <p id="pwErr" class="mut hidden" style="color:var(--bad)"></p>
-      <div class="row" style="margin-top:12px"><button id="doCreate" data-i18n="createVault">Create the vault</button></div>
+      <div class="row" style="margin-top:12px"><button id="doCreate">Create the vault</button></div>
     </div>
 
     <div class="card hidden" id="unlockRun">
-      <h2 style="margin:0 0 6px;font-size:1rem" data-i18n="unlock">Unlock</h2>
-      <label for="pw" data-i18n="passphrase">Passphrase</label>
+      <h2 style="margin:0 0 6px;font-size:1rem">Unlock</h2>
+      <label for="pw">Passphrase</label>
       <input id="pw" type="password" autocomplete="current-password">
       <p id="unErr" class="mut hidden" style="color:var(--bad)"></p>
       <div class="row" style="margin-top:12px">
-        <button id="doUnlock" data-i18n="unlockBtn">Unlock</button>
-        <button class="ghost" id="toRecovery" data-i18n="useRecovery">Use the recovery code</button>
+        <button id="doUnlock">Unlock</button>
+        <button class="ghost" id="toRecovery">Use the recovery code</button>
       </div>
     </div>
 
     <div class="card hidden" id="recoverRun">
-      <h2 style="margin:0 0 6px;font-size:1rem" data-i18n="recoveryTitle">Recovery code</h2>
-      <p class="mut" style="margin:0 0 4px" data-i18n="recoveryNote">Type the 24 words you wrote down.</p>
+      <h2 style="margin:0 0 6px;font-size:1rem">Recovery code</h2>
+      <p class="mut" style="margin:0 0 4px">Type the 24 words you wrote down.</p>
       <textarea id="rc" rows="3" placeholder="word word word …"></textarea>
       <p id="rcErr" class="mut hidden" style="color:var(--bad)"></p>
       <div class="row" style="margin-top:12px">
-        <button id="doRecover" data-i18n="recoverBtn">Recover</button>
-        <button class="ghost" id="backToUnlock" data-i18n="back">Back</button>
+        <button id="doRecover">Recover</button>
+        <button class="ghost" id="backToUnlock">Back</button>
       </div>
     </div>
 
     <div class="card hidden" id="showRecovery">
-      <h2 style="margin:0 0 6px;font-size:1rem" data-i18n="writeDown">Write this down — it is shown once</h2>
+      <h2 style="margin:0 0 6px;font-size:1rem">Write this down — it is shown once</h2>
       <p class="mut" style="margin:0 0 8px">These 24 words can unlock the vault if you forget the passphrase. Keep them somewhere else — not on this device.</p>
       <p class="code" id="rcOut"></p>
-      <label class="row" style="margin-top:8px"><input type="checkbox" id="rcAck" style="width:auto" data-i18n="ack"> I have written it down</label>
-      <div class="row" style="margin-top:12px"><button id="rcDone" disabled data-i18n="cont">Continue</button></div>
+      <label class="row" style="margin-top:8px"><input type="checkbox" id="rcAck" style="width:auto"> I have written it down</label>
+      <div class="row" style="margin-top:12px"><button id="rcDone" disabled>Continue</button></div>
     </div>
   </section>
 
@@ -135,71 +136,62 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
   <section id="appView" class="hidden">
     <div class="card">
       <div class="row">
-        <input id="q" type="search" placeholder="Search notes… (decrypted in memory while unlocked)" aria-label="Search notes" data-i18n-ph="searchPh">
-        <button class="ghost" id="newPatient" title="New patient (N)" data-i18n="newPatient">New patient</button>
-        <button class="ghost" id="exportEcl" title="Encrypted archive" data-i18n="exportEcl">Export .ecl</button>
-        <button class="ghost" id="importEcl" title="Merge or replace from an archive" data-i18n="importEcl">Import .ecl</button>
-        <button class="ghost" id="exportCsv" title="Plaintext — warned" data-i18n="exportCsv">Export CSV…</button>
-        <button class="ghost" id="importCsv" title="Plaintext in" data-i18n="importCsv">Import CSV…</button>
-        <button class="ghost" id="toggleSettings" title="Settings (S)" data-i18n="settings">Settings</button>
-        <button class="ghost danger" id="lockNow" title="Lock now (L)" data-i18n="lockNow">Lock now</button>
+        <input id="q" type="search" placeholder="Search notes… (decrypted in memory while unlocked)" aria-label="Search notes">
+        <button class="ghost" id="newPatient" title="New patient (N)">New patient</button>
+        <button class="ghost" id="exportEcl" title="Encrypted archive">Export .ecl</button>
+        <button class="ghost" id="importEcl" title="Merge or replace from an archive">Import .ecl</button>
+        <button class="ghost" id="exportCsv" title="Plaintext — warned">Export CSV…</button>
+        <button class="ghost" id="importCsv" title="Plaintext in">Import CSV…</button>
+        <button class="ghost" id="toggleSettings" title="Settings (S)">Settings</button>
+        <button class="ghost danger" id="lockNow" title="Lock now (L)">Lock now</button>
       </div>
       <div class="row" style="margin-top:9px">
         <select id="tagFilter" aria-label="Filter by tag" style="width:auto;min-width:130px"></select>
         <input id="fromDate" type="date" aria-label="Notes from" style="width:auto">
         <input id="toDate" type="date" aria-label="Notes to" style="width:auto">
-        <button class="ghost" id="clearFilters" type="button" data-i18n="clear">Clear</button>
+        <button class="ghost" id="clearFilters" type="button">Clear</button>
       </div>
       <p class="mut" id="searchNote" style="margin:8px 0 0" aria-live="polite"></p>
     </div>
 
     <div class="card">
-      <div class="spread"><h2 style="margin:0;font-size:1rem" data-i18n="patients">Patients</h2><span class="pill" id="recCount"></span></div>
+      <div class="spread"><h2 style="margin:0;font-size:1rem">Patients</h2><span class="pill" id="recCount"></span></div>
       <ul class="plain" id="patients"></ul>
-      <p class="mut hidden" id="noPatients" style="margin:10px 0 0" data-i18n="noPatients">No patients yet.</p>
+      <p class="mut hidden" id="noPatients" style="margin:10px 0 0">No patients yet.</p>
     </div>
 
     <div class="card warn hidden no-print" id="backupNudge">
-      <div class="spread"><b></b><span class="row"><button class="ghost" id="nudgeExport" type="button" data-i18n="backup">Export .ecl now</button></span></div>
+      <div class="spread"><b></b><span class="row"><button class="ghost" id="nudgeExport" type="button">Export .ecl now</button></span></div>
       <p class="mut" style="margin:6px 0 0;font-size:.82rem">An encrypted archive is the only backup there is. Keep it somewhere that is not this device.</p>
     </div>
 
     <div class="card hidden no-print" id="settingsView">
       <div class="spread">
-        <h2 style="margin:0;font-size:1rem" data-i18n="settings">Settings</h2>
-        <button class="ghost" id="closeSettings" type="button" data-i18n="close">Close</button>
+        <h2 style="margin:0;font-size:1rem">Settings</h2>
+        <button class="ghost" id="closeSettings" type="button">Close</button>
       </div>
 
       <fieldset class="settings">
-        <legend data-i18n="appearance">Appearance</legend>
+        <legend>Appearance</legend>
         <div class="grid2">
           <div>
-            <label for="setFont" data-i18n="textSize">Text size</label>
+            <label for="setFont">Text size</label>
             <select id="setFont">
               <option value="1">Normal</option>
               <option value="1.15">Larger</option>
               <option value="1.3">Largest</option>
             </select>
           </div>
-          <div>
-            <label for="langSel" data-i18n="language">Language</label>
-            <select id="langSel">
-              <option value="en">English</option>
-              <option value="hi">हिन्दी</option>
-              <option value="gu">ગુજરાતી</option>
-              <option value="mr">मराठी</option>
-            </select>
-          </div>
         </div>
         <label class="row" style="margin-top:10px"><input type="checkbox" id="setRedact" style="width:auto">
-          <span data-i18n="redact">Redact names and notes on screen (for a shared display)</span></label>
+          <span>Redact names and notes on screen (for a shared display)</span></label>
       </fieldset>
 
       <fieldset class="settings">
-        <legend data-i18n="locking">Locking</legend>
+        <legend>Locking</legend>
         <div class="grid2">
           <div>
-            <label for="setAutoMin" data-i18n="autoLock">Auto-lock after (minutes)</label>
+            <label for="setAutoMin">Auto-lock after (minutes)</label>
             <input id="setAutoMin" type="number" min="1" max="120" step="1">
           </div>
           <div>
@@ -208,11 +200,11 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
           </div>
         </div>
         <label class="row" style="margin-top:10px"><input type="checkbox" id="setLockHide" style="width:auto">
-          <span data-i18n="lockHide">Lock as soon as the tab is hidden</span></label>
+          <span>Lock as soon as the tab is hidden</span></label>
       </fieldset>
 
       <fieldset class="settings">
-        <legend data-i18n="passphrase">Passphrase and recovery</legend>
+        <legend>Passphrase and recovery</legend>
         <div class="grid2">
           <div>
             <label for="cp1">New passphrase</label>
@@ -224,8 +216,8 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
           </div>
         </div>
         <div class="row" style="margin-top:10px">
-          <button id="changePass" type="button" data-i18n="changePass">Change passphrase</button>
-          <button class="ghost" id="rotateRecovery" type="button" data-i18n="newRecovery">New recovery code</button>
+          <button id="changePass" type="button">Change passphrase</button>
+          <button class="ghost" id="rotateRecovery" type="button">New recovery code</button>
         </div>
         <p class="mut" style="margin:8px 0 0;font-size:.8rem">The passphrase only wraps the data key, so changing it never re-encrypts a record. Rotating the recovery code invalidates the old one immediately.</p>
         <div class="card hidden" id="showRecovery2" style="margin:10px 0 0">
@@ -236,7 +228,7 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
       </fieldset>
 
       <fieldset class="settings">
-        <legend data-i18n="decoy">Decoy vault</legend>
+        <legend>Decoy vault</legend>
         <p class="mut" id="duressState" style="margin:0 0 10px;font-size:.82rem">No decoy vault. One passphrase, one vault.</p>
         <div class="grid2">
           <div>
@@ -256,11 +248,11 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
       </fieldset>
 
       <fieldset class="settings">
-        <legend data-i18n="storage">Storage and health</legend>
+        <legend>Storage and health</legend>
         <p class="mut" id="storageOut" style="margin:0 0 10px;font-size:.82rem"></p>
         <div class="row">
-          <button class="ghost" id="runHealth" type="button" data-i18n="verifyAll">Verify every record</button>
-          <button class="ghost" id="runTests" type="button" data-i18n="runTests">Run the self-tests</button>
+          <button class="ghost" id="runHealth" type="button">Verify every record</button>
+          <button class="ghost" id="runTests" type="button">Run the self-tests</button>
         </div>
         <pre id="healthOut" class="mut"></pre>
         <p class="mut" style="margin:6px 0 0;font-size:.8rem">Last encrypted export: <span id="exportSum">never</span></p>
@@ -276,18 +268,19 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
     <div class="card hidden" id="editor">
       <div class="spread">
         <h2 style="margin:0;font-size:1rem" id="edTitle">Patient</h2>
-        <div class="row no-print"><button class="ghost" id="printRecord" type="button" title="Print this record" data-i18n="print">Print</button><button class="ghost" id="edClose" data-i18n="close">Close</button><button class="danger" id="edDelete" data-i18n="del">Delete</button></div>
+        <div class="row no-print"><button class="ghost" id="printRecord" type="button" title="Print this record">Print</button><button class="ghost" id="edClose">Close</button><button class="danger" id="edDelete">Delete</button></div>
       </div>
-      <label for="pLabel" data-i18n="labelField">Label — initials or a code, <b>not</b> a full name</label>
+      <div class="no-print">
+      <label for="pLabel">Label — initials or a code, <b>not</b> a full name</label>
       <input id="pLabel" maxlength="40">
       <p class="mut" style="margin:6px 0 0;font-size:.8rem">The device may be shared, and the label is the field most likely to be seen on a lock screen. A code protects the patient.</p>
       <div class="grid2">
         <div>
-          <label for="nDate" data-i18n="noteDate">Note date</label>
+          <label for="nDate">Note date</label>
           <input id="nDate" type="date">
         </div>
         <div>
-          <label for="nSeverity" data-i18n="severityField">Severity (1 mild → 4 marked)</label>
+          <label for="nSeverity">Severity (1 mild → 4 marked)</label>
           <select id="nSeverity">
             <option value="1">1 — mild</option>
             <option value="2">2 — moderate</option>
@@ -296,24 +289,25 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
           </select>
         </div>
       </div>
-      <label for="nText" data-i18n="noteField">Note</label>
+      <label for="nText">Note</label>
       <textarea id="nText" rows="6"></textarea>
-      <label for="nTags" data-i18n="tagsField">Tags (comma separated)</label>
+      <label for="nTags">Tags (comma separated)</label>
       <input id="nTags">
-      <div class="row" style="margin-top:12px"><button id="edSave" data-i18n="save">Save</button><span class="mut" id="edSaved"></span></div>
-      <h3 style="font-size:.9rem;margin:16px 0 4px" data-i18n="severityOver">Severity over time</h3>
-      <div id="edSpark"></div>
-      <h3 style="font-size:.9rem;margin:16px 0 4px" data-i18n="timeline">Timeline</h3>
-      <ul class="plain" id="edTimeline"></ul>
-      <div class="spread" style="margin:16px 0 4px">
-        <h3 style="font-size:.9rem;margin:0" data-i18n="earlier">Earlier versions</h3>
-        <button class="ghost no-print" id="purgeHistory" type="button" data-i18n="purgeHistory">Purge history</button>
+      <div class="row" style="margin-top:12px"><button id="edSave">Save</button><span class="mut" id="edSaved"></span></div>
       </div>
-      <ul class="plain" id="edHistory"></ul>
-      <p class="mut" style="font-size:.78rem;margin:8px 0 0">Every save keeps the previous ciphertext, up to five versions. Restoring one is itself a save, so nothing is lost.</p>
+      <h3 style="font-size:.9rem;margin:16px 0 4px">Severity over time</h3>
+      <div id="edSpark"></div>
+      <h3 style="font-size:.9rem;margin:16px 0 4px">Timeline</h3>
+      <ul class="plain" id="edTimeline"></ul>
+      <div class="spread no-print" style="margin:16px 0 4px">
+        <h3 style="font-size:.9rem;margin:0">Earlier versions</h3>
+        <button class="ghost no-print" id="purgeHistory" type="button">Purge history</button>
+      </div>
+      <ul class="plain no-print" id="edHistory"></ul>
+      <p class="mut no-print" style="font-size:.78rem;margin:8px 0 0">Every save keeps the previous ciphertext, up to five versions. Restoring one is itself a save, so nothing is lost.</p>
     </div>
 
-    <p class="mut" style="font-size:.78rem;margin:14px 0 40px">Auto-locks after <span id="autoMin">5</span> minutes idle. Your data stays on this device: there is no server to reset a forgotten passphrase. <span class="mut">· <span id="buildStamp">build</span></span></p>
+    <p class="mut" style="font-size:.78rem;margin:14px 0 40px">Auto-locks when idle (see Settings). Your data stays on this device: there is no server to reset a forgotten passphrase. <span class="mut">· <span id="buildStamp">build</span></span></p>
   </section>
 </div>
 <div id="toast"></div>
@@ -700,149 +694,7 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
   };
 
   /* ------------------------------------------------------------------ the app */
-  /* ------------------------------------------------------------ the languages
-     These dictionaries are this app's own strings — app data, not a shared kit.
-     Nothing here is fetched: the file IS the translation. Anything without a
-     translation falls back to English rather than pretending. */
-  var I18N = {
-    en: {
-      patients: "Patients", timeline: "Timeline", earlier: "Earlier versions",
-      severityOver: "Severity over time", settings: "Settings",
-      newPatient: "New patient", exportEcl: "Export .ecl", importEcl: "Import .ecl",
-      exportCsv: "Export CSV…", importCsv: "Import CSV…", lockNow: "Lock now",
-      clear: "Clear", save: "Save", close: "Close", del: "Delete", print: "Print",
-      searchPh: "Search notes… (decrypted in memory while unlocked)",
-      noPatients: "No patients yet.",
-      appearance: "Appearance", locking: "Locking", passphrase: "Passphrase and recovery",
-      decoy: "Decoy vault", storage: "Storage and health",
-      textSize: "Text size", language: "Language", autoLock: "Auto-lock after (minutes)",
-      redact: "Redact names and notes on screen (for a shared display)",
-      lockHide: "Lock as soon as the tab is hidden",
-      newPass: "New passphrase", repeat: "Repeat it",
-      changePass: "Change passphrase", newRecovery: "New recovery code",
-      verifyAll: "Verify every record", runTests: "Run the self-tests",
-      backup: "Export .ecl now", records: "record(s)", notes: "note(s)",
-      open: "Open", allTags: "All tags", sev: "sev", purgeHistory: "Purge history",
-      setPass: "Set a passphrase", passphrase: "Passphrase", createVault: "Create the vault",
-      setPassNote: "Everything is encrypted on this device with AES-256-GCM. There is no server and no account — if you lose the passphrase and the recovery code, the data is unrecoverable.",
-      unlock: "Unlock", unlockBtn: "Unlock", useRecovery: "Use the recovery code",
-      recoveryTitle: "Recovery code", recoveryNote: "Type the 24 words you wrote down.",
-      recoverBtn: "Recover", back: "Back", writeDown: "Write this down — it is shown once",
-      ack: "I have written it down", cont: "Continue",
-      labelField: "Label — initials or a code, not a full name", noteDate: "Note date",
-      severityField: "Severity (1 mild → 4 marked)", noteField: "Note",
-      tagsField: "Tags (comma separated)", demoTitle: "Demo vault."
-    },
-    hi: {
-      patients: "रोगी", timeline: "समयरेखा", earlier: "पुराने संस्करण",
-      severityOver: "समय के साथ गंभीरता", settings: "सेटिंग्स",
-      newPatient: "नया रोगी", exportEcl: ".ecl निर्यात करें", importEcl: ".ecl आयात करें",
-      exportCsv: "CSV निर्यात करें…", importCsv: "CSV आयात करें…", lockNow: "अभी लॉक करें",
-      clear: "साफ़ करें", save: "सहेजें", close: "बंद करें", del: "हटाएँ", print: "छापें",
-      searchPh: "टिप्पणियाँ खोजें… (अनलॉक रहते हुए मेमोरी में डिक्रिप्ट)",
-      noPatients: "अभी कोई रोगी नहीं।",
-      appearance: "रूप", locking: "लॉकिंग", passphrase: "पासफ़्रेज़ और रिकवरी",
-      decoy: "छद्म वॉल्ट", storage: "संग्रहण और स्वास्थ्य",
-      textSize: "पाठ का आकार", language: "भाषा", autoLock: "स्वतः लॉक (मिनट में)",
-      redact: "साझा स्क्रीन के लिए नाम और टिप्पणियाँ छिपाएँ",
-      lockHide: "टैब छिपते ही लॉक करें",
-      newPass: "नया पासफ़्रेज़", repeat: "दोहराएँ",
-      changePass: "पासफ़्रेज़ बदलें", newRecovery: "नया रिकवरी कोड",
-      verifyAll: "हर रिकॉर्ड जाँचें", runTests: "स्वयं-परीक्षण चलाएँ",
-      backup: "अभी .ecl निर्यात करें", records: "रिकॉर्ड", notes: "टिप्पणियाँ",
-      open: "खोलें", allTags: "सभी टैग", sev: "गंभीरता", purgeHistory: "इतिहास मिटाएँ",
-      setPass: "पासफ़्रेज़ सेट करें", passphrase: "पासफ़्रेज़", createVault: "वॉल्ट बनाएँ",
-      setPassNote: "सब कुछ इसी डिवाइस पर AES-256-GCM से एन्क्रिप्ट रहता है। कोई सर्वर नहीं, कोई खाता नहीं — पासफ़्रेज़ और रिकवरी कोड खो दिया तो डेटा वापस नहीं आएगा।",
-      unlock: "अनलॉक", unlockBtn: "अनलॉक करें", useRecovery: "रिकवरी कोड इस्तेमाल करें",
-      recoveryTitle: "रिकवरी कोड", recoveryNote: "आपने लिखे 24 शब्द यहाँ डालें।",
-      recoverBtn: "रिकवर करें", back: "वापस", writeDown: "इसे लिख लें — यह एक बार ही दिखेगा",
-      ack: "मैंने लिख लिया", cont: "आगे बढ़ें",
-      labelField: "लेबल — आद्याक्षर या कोड, पूरा नाम नहीं", noteDate: "टिप्पणी की तारीख",
-      severityField: "गंभीरता (1 हल्की → 4 अधिक)", noteField: "टिप्पणी",
-      tagsField: "टैग (कॉमा से अलग)", demoTitle: "डेमो वॉल्ट।"
-    },
-    gu: {
-      patients: "દર્દીઓ", timeline: "સમયરેખા", earlier: "જૂની આવૃત્તિઓ",
-      severityOver: "સમય સાથે તીવ્રતા", settings: "સેટિંગ્સ",
-      newPatient: "નવો દર્દી", exportEcl: ".ecl નિકાસ કરો", importEcl: ".ecl આયાત કરો",
-      exportCsv: "CSV નિકાસ કરો…", importCsv: "CSV આયાત કરો…", lockNow: "હવે લૉક કરો",
-      clear: "સાફ કરો", save: "સાચવો", close: "બંધ કરો", del: "દૂર કરો", print: "છાપો",
-      searchPh: "નોંધ શોધો… (અનલૉક હોય ત્યારે મેમરીમાં ડિક્રિપ્ટ)",
-      noPatients: "હજી કોઈ દર્દી નથી.",
-      appearance: "દેખાવ", locking: "લૉકિંગ", passphrase: "પાસફ્રેઝ અને રિકવરી",
-      decoy: "છદ્મ વૉલ્ટ", storage: "સંગ્રહ અને આરોગ્ય",
-      textSize: "લખાણનું માપ", language: "ભાષા", autoLock: "સ્વયં લૉક (મિનિટ)",
-      redact: "વહેંચાયેલ સ્ક્રીન માટે નામ અને નોંધ છુપાવો",
-      lockHide: "ટૅબ છુપાય કે તરત લૉક કરો",
-      newPass: "નવો પાસફ્રેઝ", repeat: "પુનરાવર્તન",
-      changePass: "પાસફ્રેઝ બદલો", newRecovery: "નવો રિકવરી કોડ",
-      verifyAll: "દરેક રેકોર્ડ ચકાસો", runTests: "સ્વયં-પરીક્ષણ ચલાવો",
-      backup: "હવે .ecl નિકાસ કરો", records: "રેકોર્ડ", notes: "નોંધ",
-      open: "ખોલો", allTags: "બધા ટૅગ", sev: "તીવ્રતા", purgeHistory: "ઇતિહાસ દૂર કરો",
-      setPass: "પાસફ્રેઝ સેટ કરો", passphrase: "પાસફ્રેઝ", createVault: "વૉલ્ટ બનાવો",
-      setPassNote: "બધું આ જ ડિવાઇસ પર AES-256-GCM થી એન્ક્રિપ્ટ રહે છે. કોઈ સર્વર નહીં, કોઈ ખાતું નહીં — પાસફ્રેઝ અને રિકવરી કોડ ખોવાય તો ડેટા પાછો નહીં આવે.",
-      unlock: "અનલૉક", unlockBtn: "અનલૉક કરો", useRecovery: "રિકવરી કોડ વાપરો",
-      recoveryTitle: "રિકવરી કોડ", recoveryNote: "તમે લખેલા 24 શબ્દો અહીં લખો.",
-      recoverBtn: "રિકવર કરો", back: "પાછળ", writeDown: "આ લખી લો — એક જ વાર દેખાશે",
-      ack: "મેં લખી લીધું", cont: "આગળ વધો",
-      labelField: "લેબલ — આદ્યાક્ષર કે કોડ, પૂરું નામ નહીં", noteDate: "નોંધની તારીખ",
-      severityField: "તીવ્રતા (1 હળવી → 4 વધુ)", noteField: "નોંધ",
-      tagsField: "ટૅગ (કોમાથી અલગ)", demoTitle: "ડેમો વૉલ્ટ."
-    },
-    mr: {
-      patients: "रुग्ण", timeline: "कालरेषा", earlier: "जुनी आवृत्ती",
-      severityOver: "कालानुसार तीव्रता", settings: "सेटिंग्ज",
-      newPatient: "नवीन रुग्ण", exportEcl: ".ecl निर्यात करा", importEcl: ".ecl आयात करा",
-      exportCsv: "CSV निर्यात करा…", importCsv: "CSV आयात करा…", lockNow: "आता लॉक करा",
-      clear: "साफ करा", save: "जतन करा", close: "बंद करा", del: "हटवा", print: "छापा",
-      searchPh: "नोंदी शोधा… (अनलॉक असताना मेमरीत डिक्रिप्ट)",
-      noPatients: "अजून कोणतेही रुग्ण नाहीत.",
-      appearance: "स्वरूप", locking: "लॉकिंग", passphrase: "पासफ्रेज आणि रिकव्हरी",
-      decoy: "छद्म व्हॉल्ट", storage: "साठवण आणि आरोग्य",
-      textSize: "मजकुराचा आकार", language: "भाषा", autoLock: "स्वयं लॉक (मिनिटे)",
-      redact: "सामायिक स्क्रीनसाठी नावे आणि नोंदी लपवा",
-      lockHide: "टॅब लपताच लॉक करा",
-      newPass: "नवीन पासफ्रेज", repeat: "पुन्हा लिहा",
-      changePass: "पासफ्रेज बदला", newRecovery: "नवीन रिकव्हरी कोड",
-      verifyAll: "प्रत्येक रेकॉर्ड तपासा", runTests: "स्वयं-चाचण्या चालवा",
-      backup: "आता .ecl निर्यात करा", records: "रेकॉर्ड", notes: "नोंदी",
-      open: "उघडा", allTags: "सर्व टॅग", sev: "तीव्रता", purgeHistory: "इतिहास काढा",
-      setPass: "पासफ्रेज सेट करा", passphrase: "पासफ्रेज", createVault: "व्हॉल्ट तयार करा",
-      setPassNote: "सर्व काही याच डिव्हाइसवर AES-256-GCM ने एन्क्रिप्ट राहते. सर्व्हर नाही, खाते नाही — पासफ्रेज आणि रिकव्हरी कोड हरवला तर डेटा परत मिळणार नाही.",
-      unlock: "अनलॉक", unlockBtn: "अनलॉक करा", useRecovery: "रिकव्हरी कोड वापरा",
-      recoveryTitle: "रिकव्हरी कोड", recoveryNote: "तुम्ही लिहिलेले २४ शब्द इथे टाका.",
-      recoverBtn: "रिकव्हर करा", back: "मागे", writeDown: "हे लिहून घ्या — एकदाच दिसेल",
-      ack: "मी लिहून घेतले", cont: "पुढे",
-      labelField: "लेबल — आद्याक्षरे किंवा कोड, पूर्ण नाव नाही", noteDate: "नोंदीची तारीख",
-      severityField: "तीव्रता (१ सौम्य → ४ जास्त)", noteField: "नोंद",
-      tagsField: "टॅग (स्वल्पविरामाने वेगळे)", demoTitle: "डेमो व्हॉल्ट."
-    }
-  };
-
-  /* a string in the current language, falling back to English */
-  function t(k) {
-    var d = I18N[state.settings.lang] || I18N.en;
-    return d[k] || I18N.en[k] || k;
-  }
-
-  function i18nApply(lang) {
-    var d = I18N[lang] || I18N.en, base = I18N.en, k, els, i, j;
-    els = document.querySelectorAll("[data-i18n]");
-    for (i = 0; i < els.length; i++) {
-      k = els[i].getAttribute("data-i18n");
-      els[i].textContent = d[k] || base[k] || els[i].textContent;
-    }
-    els = document.querySelectorAll("[data-i18n-ph]");
-    for (j = 0; j < els.length; j++) {
-      k = els[j].getAttribute("data-i18n-ph");
-      els[j].setAttribute("placeholder", d[k] || base[k] || "");
-    }
-    if (document.documentElement && document.documentElement.setAttribute) {
-      document.documentElement.setAttribute("lang", lang || "en");
-    }
-  }
-
-  var DEFAULT_SETTINGS = { autoMin: 5, lockOnHide: false, wipeAfter: 5, lang: "en", fontScale: 1, redact: false, backupEvery: 10 };
+  var DEFAULT_SETTINGS = { autoMin: 5, lockOnHide: false, wipeAfter: 0, fontScale: 1, redact: false, backupEvery: 10 };
   function defaults(o) {
     var r = {}, k;
     for (k in DEFAULT_SETTINGS) r[k] = DEFAULT_SETTINGS[k];
@@ -889,15 +741,11 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
   function applySettings() {
     var f = Number(state.settings.fontScale) || 1;
     document.documentElement.style.setProperty("--scale", String(f));
-    document.body.classList[f > 1 ? "add" : "remove"]("big-text");
     document.body.classList[state.settings.redact ? "add" : "remove"]("redact");
-    var lang = $("langSel"); if (lang) lang.value = state.settings.lang || "en";
     var am = $("setAutoMin"); if (am) am.value = state.settings.autoMin;
     var lh = $("setLockHide"); if (lh) lh.checked = !!state.settings.lockOnHide;
     var wa = $("setWipe"); if (wa) wa.value = state.settings.wipeAfter;
     var fs = $("setFont"); if (fs) fs.value = String(f);
-    i18nApply(state.settings.lang || "en");
-    if (state.patients.length) render();
   }
 
   function byUpdated(a, b) { return (b.updated || 0) - (a.updated || 0); }
@@ -960,19 +808,19 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
       var n = (p.symptoms || []).length;
       var sev = (p.symptoms || []).reduce(function (m, x) { return Math.max(m, x.severity || 1); }, 1);
       var label = red ? '<span class="redactable">' + esc(p.title || "(no label)") + '</span>' : esc(p.title || "(no label)");
-      return '<li><span><b>' + label + '</b> <span class="mut">· ' + n + ' ' + esc(t("notes")) + '</span></span>'
-        + '<span class="row"><span class="pill sev s' + sev + '">' + esc(t("sev")) + ' ' + sev + '</span>'
-        + '<button class="ghost" data-open="' + esc(p.id) + '">' + esc(t("open")) + '</button></span></li>';
+      return '<li><span><b>' + label + '</b> <span class="mut">· ' + n + ' note' + (n === 1 ? "" : "s") + '</span></span>'
+        + '<span class="row"><span class="pill sev s' + sev + '">sev ' + sev + '</span>'
+        + '<button class="ghost" data-open="' + esc(p.id) + '">Open</button></span></li>';
     }).join("");
     $("noPatients").classList[list.length ? "add" : "remove"]("hidden");
-    $("recCount").textContent = state.patients.length + " " + t("records");
+    $("recCount").textContent = state.patients.length + " record(s)";
 
     /* the tag filter offers only tags that exist, so it cannot be a dead end */
     var tags = {}; state.patients.forEach(function (p) { patientTags(p).forEach(function (t) { tags[t] = 1; }); });
     var sel = $("tagFilter");
     if (sel) {
       var names = Object.keys(tags).sort();
-      sel.innerHTML = '<option value="">' + esc(t("allTags")) + '</option>' + names.map(function (tag) {
+      sel.innerHTML = '<option value="">All tags</option>' + names.map(function (tag) {
         return '<option value="' + esc(tag) + '"' + (tag === state.tagFilter ? " selected" : "") + '>' + esc(tag) + '</option>';
       }).join("");
     }
@@ -1429,7 +1277,7 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
           });
         });
         chain.then(function () { return refresh(); })
-          .then(function () { toast("Imported " + notes + " note(s) into " + (made + (notes ? 0 : 0)) + " new patient(s)."); })
+          .then(function () { toast("Imported " + notes + " note(s)" + (made ? " into " + made + " new patient(s)" : "") + "."); })
           .catch(function (e) { toast("Could not import: " + String(e.message || e)); });
       };
       rd.readAsText(f);
@@ -1455,9 +1303,6 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
     };
     if ($("setRedact")) $("setRedact").onchange = function () {
       state.settings.redact = !!this.checked; saveSettings(); applySettings();
-    };
-    if ($("langSel")) $("langSel").onchange = function () {
-      state.settings.lang = this.value; saveSettings(); applySettings();
     };
   }
   bindSettings();
@@ -1528,6 +1373,7 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
   function renderStorage() {
     var box = $("storageOut");
     if (!box) return;
+    if (DEMO) { box.textContent = "demo vault — nothing is written to this device"; return; }
     var bits = [];
     if (navigator.storage && navigator.storage.estimate) {
       navigator.storage.estimate().then(function (q) {

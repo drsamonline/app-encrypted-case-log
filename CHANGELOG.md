@@ -43,11 +43,12 @@ in the footer; this file is the long form.
 - **Settings**: auto-lock minutes, lock-on-tab-hide, text size, redaction curtain, storage
   quota, vault health, and the self-tests on demand.
 
-### Language, icons and releases
+### Text, icons and releases
 
-- **Four languages in the app's own script**: English, हिन्दी, ગુજરાતી, मराठी — no translation
-  service, no network, and no new kit (kits are one-way here). 57 strings are translated:
-  the lock and recovery screens, the list, the editor, and the settings panel.
+- **English only, deliberately.** A four-language layer (English, हिन्दी, ગુજરાતી, मराठी) was
+  built and then removed: it covered the chrome but not the clinical content, and a
+  half-translated record screen is worse than an English one. What replaced it is a text-size
+  control that actually scales, and a keyboard layer.
 - **The icon is redrawn** in the app's own palette, and the PWA set (192, 512, maskable 512,
   apple-touch, favicon.ico) is rendered locally by `scripts/icons.py`. `docs/play/icon.png` is
   committed so the EXE and APK are built from the real icon, not a monogram fallback.
