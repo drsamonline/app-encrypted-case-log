@@ -1,41 +1,48 @@
-# Attach SHA256SUMS.txt to every published release.
+# Attach SHA256SUMS.txt to the rolling release.
 #
 # The build workflow (app-builder) owns the assets: the portable EXE, the APK and the
 # Linux binary. This job only reads them and adds a checksum file beside them, so a
 # download can be verified offline — which matters for an app that refuses to make
 # network requests at runtime.
 #
-# Uploading an asset does not fire `release: published` again, so this cannot loop.
+# It hangs off `workflow_run`, not `release: published`: the pipeline maintains a
+# ROLLING release (app-latest) and updates it in place, so no release is ever
+# "published" after the first one. Uploading an asset fires no release event, so this
+# cannot loop.
 
 name: checksums
 
 on:
-  release:
-    types: [ published ]
+  workflow_run:
+    workflows: [ "Build + deploy" ]
+    types: [ completed ]
   workflow_dispatch:
     inputs:
       tag:
         description: Release tag to checksum
-        required: true
+        required: false
+        default: app-latest
 
 permissions:
   contents: write
 
 jobs:
   sums:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.event.inputs.tag || 'app-latest' }}
     steps:
       - name: Download the release assets
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event.release.tag_name || inputs.tag }}
         run: |
           set -euo pipefail
           mkdir -p dl
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir dl --clobber
           rm -f dl/SHA256SUMS.txt
+          ls -l dl
 
-      - name: Write and show SHA256SUMS.txt
+      - name: Write SHA256SUMS.txt
         run: |
           set -euo pipefail
           cd dl
@@ -43,7 +50,4 @@ jobs:
           cat SHA256SUMS.txt
 
       - name: Upload it to the release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event.release.tag_name || inputs.tag }}
         run: gh release upload "$TAG" dl/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
