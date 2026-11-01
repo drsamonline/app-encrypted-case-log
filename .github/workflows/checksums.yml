@@ -1,21 +1,24 @@
 # Attach SHA256SUMS.txt to the rolling release.
 #
 # The build workflow (app-builder) owns the assets: the portable EXE, the APK and the
-# Linux binary. This job only reads them and adds a checksum file beside them, so a
+# Linux binary. This job only reads them and writes a checksum file beside them, so a
 # download can be verified offline — which matters for an app that refuses to make
 # network requests at runtime.
 #
-# It hangs off `workflow_run`, not `release: published`: the pipeline maintains a
-# ROLLING release (app-latest) and updates it in place, so no release is ever
-# "published" after the first one. Uploading an asset fires no release event, so this
-# cannot loop.
+# It hangs off `push`, not `release: published`: the pipeline maintains a ROLLING
+# release (app-latest) and updates it in place, so no release is ever "published" again.
+# It also cannot use `workflow_run` — that event never fired for the reusable build
+# workflow here, and a trigger that silently does nothing is worse than none.
+#
+# Because the build runs on the same push, the job waits (bounded) until the release
+# assets are fresher than this run started. If the build fails, the wait times out and
+# this job fails, which is the signal you want.
 
 name: checksums
 
 on:
-  workflow_run:
-    workflows: [ "Build + deploy" ]
-    types: [ completed ]
+  push:
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       tag:
@@ -26,14 +29,40 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: checksums
+  cancel-in-progress: true
+
 jobs:
   sums:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # the pipeline's own "chore: screenshot [skip ci]" commits build nothing
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
       TAG: ${{ github.event.inputs.tag || 'app-latest' }}
     steps:
+      - name: Wait for this push's build to refresh the release
+        run: |
+          set -euo pipefail
+          started=$(date +%s)
+          deadline=$(( started + 900 ))
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            newest=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" \
+                       --jq '[.assets[].updated_at] | max' 2>/dev/null || echo "")
+            if [ -n "$newest" ] && [ "$newest" != "null" ]; then
+              age=$(( $(date +%s) - $(date -d "$newest" +%s) ))
+              if [ "$age" -lt 1200 ]; then
+                echo "release assets refreshed ${age}s ago — continuing"
+                exit 0
+              fi
+            fi
+            echo "waiting for the build to publish new assets…"
+            sleep 30
+          done
+          echo "::error::the release was not refreshed within 15 minutes"
+          exit 1
+
       - name: Download the release assets
         run: |
           set -euo pipefail
