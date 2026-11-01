@@ -11,6 +11,8 @@
 <meta name="theme-color" content="#0f766e">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <style>
 :root{--bg:#0b1220;--card:#141d2e;--ink:#e8eef7;--mut:#93a3ba;--line:rgba(255,255,255,.10);--acc:#14b8a6;--warn:#f59e0b;--bad:#ef4444;--ok:#22c55e;--field:#0d1526;--r:12px}
 *{box-sizing:border-box}
@@ -37,6 +39,38 @@ ul.plain li:first-child{border-top:0}
 .hidden{display:none!important}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:var(--field);border:1px solid var(--line);border-radius:9px;padding:9px 14px;opacity:0;transition:.25s}
 #toast.on{opacity:1}
+/* severity, as a colour that means something on its own */
+.pill.sev{border-radius:6px;font-variant-numeric:tabular-nums}
+.pill.sev.s1{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 45%,transparent)}
+.pill.sev.s2{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
+.pill.sev.s3{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
+.pill.sev.s4{color:var(--bad);background:color-mix(in srgb,var(--bad) 18%,transparent);border-color:var(--bad);font-weight:700}
+.spark{display:block;color:var(--acc);margin:8px 0 0}
+/* the redaction curtain: for a shared screen, not for a shared file */
+body.redact .redactable,body.redact #edTimeline li span,body.redact #edTitle,
+body.redact #pLabel,body.redact #nText,body.redact #nTags{filter:blur(5px);user-select:none}
+body.big-text{font-size:18px}
+body.big-text .wrap{max-width:1040px}
+#edHistory li,#healthOut,#storageOut{white-space:pre-wrap}
+#healthOut{font-size:.8rem;max-height:220px;overflow:auto;margin:8px 0 0}
+fieldset.settings{border:1px solid var(--line);border-radius:var(--r);margin:0 0 12px;padding:12px 14px}
+fieldset.settings legend{font-size:.8rem;color:var(--mut);padding:0 6px;letter-spacing:.04em;text-transform:uppercase}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+@media (max-width:640px){.grid2{grid-template-columns:1fr}}
+details.help{margin-top:10px;font-size:.86rem}
+details.help summary{cursor:pointer;color:var(--mut)}
+kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78rem;font-family:ui-monospace,Menlo,monospace}
+/* print: the record, and only the record — the offline way to hand it over */
+@media print{
+  body{background:#fff!important;color:#000!important}
+  #lockView,#demoBanner,header,.no-print,.card:not(#editor),#toast{display:none!important}
+  .wrap{max-width:none;padding:0}
+  #appView{display:block!important}
+  #editor{display:block!important;border:0;padding:0}
+  #editor button{display:none!important}
+  #edTimeline li{page-break-inside:avoid}
+  a[href]:after{content:""}
+}
 </style>
 </head>
 <body>
@@ -101,39 +135,179 @@ ul.plain li:first-child{border-top:0}
   <section id="appView" class="hidden">
     <div class="card">
       <div class="row">
-        <input id="q" type="search" placeholder="Search notes… (decrypted in memory while unlocked)">
-        <button class="ghost" id="newPatient">New patient</button>
-        <button class="ghost" id="exportEcl">Export .ecl</button>
-        <button class="ghost" id="importEcl">Import .ecl</button>
-        <button class="ghost" id="exportCsv">Export CSV…</button>
-        <button class="ghost danger" id="lockNow">Lock now</button>
+        <input id="q" type="search" placeholder="Search notes… (decrypted in memory while unlocked)" aria-label="Search notes" data-i18n-ph="searchPh">
+        <button class="ghost" id="newPatient" title="New patient (N)" data-i18n="newPatient">New patient</button>
+        <button class="ghost" id="exportEcl" title="Encrypted archive" data-i18n="exportEcl">Export .ecl</button>
+        <button class="ghost" id="importEcl" title="Merge or replace from an archive" data-i18n="importEcl">Import .ecl</button>
+        <button class="ghost" id="exportCsv" title="Plaintext — warned" data-i18n="exportCsv">Export CSV…</button>
+        <button class="ghost" id="importCsv" title="Plaintext in" data-i18n="importCsv">Import CSV…</button>
+        <button class="ghost" id="toggleSettings" title="Settings (S)" data-i18n="settings">Settings</button>
+        <button class="ghost danger" id="lockNow" title="Lock now (L)" data-i18n="lockNow">Lock now</button>
       </div>
-      <p class="mut" id="searchNote" style="margin:8px 0 0"></p>
+      <div class="row" style="margin-top:9px">
+        <select id="tagFilter" aria-label="Filter by tag" style="width:auto;min-width:130px"></select>
+        <input id="fromDate" type="date" aria-label="Notes from" style="width:auto">
+        <input id="toDate" type="date" aria-label="Notes to" style="width:auto">
+        <button class="ghost" id="clearFilters" type="button" data-i18n="clear">Clear</button>
+      </div>
+      <p class="mut" id="searchNote" style="margin:8px 0 0" aria-live="polite"></p>
     </div>
 
     <div class="card">
-      <div class="spread"><h2 style="margin:0;font-size:1rem">Patients</h2><span class="pill" id="recCount"></span></div>
+      <div class="spread"><h2 style="margin:0;font-size:1rem" data-i18n="patients">Patients</h2><span class="pill" id="recCount"></span></div>
       <ul class="plain" id="patients"></ul>
-      <p class="mut hidden" id="noPatients" style="margin:10px 0 0">No patients yet.</p>
+      <p class="mut hidden" id="noPatients" style="margin:10px 0 0" data-i18n="noPatients">No patients yet.</p>
+    </div>
+
+    <div class="card warn hidden no-print" id="backupNudge">
+      <div class="spread"><b></b><span class="row"><button class="ghost" id="nudgeExport" type="button" data-i18n="backup">Export .ecl now</button></span></div>
+      <p class="mut" style="margin:6px 0 0;font-size:.82rem">An encrypted archive is the only backup there is. Keep it somewhere that is not this device.</p>
+    </div>
+
+    <div class="card hidden no-print" id="settingsView">
+      <div class="spread">
+        <h2 style="margin:0;font-size:1rem" data-i18n="settings">Settings</h2>
+        <button class="ghost" id="closeSettings" type="button" data-i18n="close">Close</button>
+      </div>
+
+      <fieldset class="settings">
+        <legend data-i18n="appearance">Appearance</legend>
+        <div class="grid2">
+          <div>
+            <label for="setFont" data-i18n="textSize">Text size</label>
+            <select id="setFont">
+              <option value="1">Normal</option>
+              <option value="1.15">Larger</option>
+              <option value="1.3">Largest</option>
+            </select>
+          </div>
+          <div>
+            <label for="langSel" data-i18n="language">Language</label>
+            <select id="langSel">
+              <option value="en">English</option>
+              <option value="hi">हिन्दी</option>
+              <option value="gu">ગુજરાતી</option>
+              <option value="mr">मराठी</option>
+            </select>
+          </div>
+        </div>
+        <label class="row" style="margin-top:10px"><input type="checkbox" id="setRedact" style="width:auto">
+          <span data-i18n="redact">Redact names and notes on screen (for a shared display)</span></label>
+      </fieldset>
+
+      <fieldset class="settings">
+        <legend data-i18n="locking">Locking</legend>
+        <div class="grid2">
+          <div>
+            <label for="setAutoMin" data-i18n="autoLock">Auto-lock after (minutes)</label>
+            <input id="setAutoMin" type="number" min="1" max="120" step="1">
+          </div>
+          <div>
+            <label for="setWipe">Destroy the vault after N wrong passphrases (0 = never)</label>
+            <input id="setWipe" type="number" min="0" max="20" step="1">
+          </div>
+        </div>
+        <label class="row" style="margin-top:10px"><input type="checkbox" id="setLockHide" style="width:auto">
+          <span data-i18n="lockHide">Lock as soon as the tab is hidden</span></label>
+      </fieldset>
+
+      <fieldset class="settings">
+        <legend data-i18n="passphrase">Passphrase and recovery</legend>
+        <div class="grid2">
+          <div>
+            <label for="cp1">New passphrase</label>
+            <input id="cp1" type="password" autocomplete="new-password">
+          </div>
+          <div>
+            <label for="cp2">Repeat it</label>
+            <input id="cp2" type="password" autocomplete="new-password">
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button id="changePass" type="button" data-i18n="changePass">Change passphrase</button>
+          <button class="ghost" id="rotateRecovery" type="button" data-i18n="newRecovery">New recovery code</button>
+        </div>
+        <p class="mut" style="margin:8px 0 0;font-size:.8rem">The passphrase only wraps the data key, so changing it never re-encrypts a record. Rotating the recovery code invalidates the old one immediately.</p>
+        <div class="card hidden" id="showRecovery2" style="margin:10px 0 0">
+          <b>Write this down — it is shown once</b>
+          <p class="code" id="rcOut2"></p>
+          <button class="ghost" id="rcDone2" type="button">Done</button>
+        </div>
+      </fieldset>
+
+      <fieldset class="settings">
+        <legend data-i18n="decoy">Decoy vault</legend>
+        <p class="mut" id="duressState" style="margin:0 0 10px;font-size:.82rem">No decoy vault. One passphrase, one vault.</p>
+        <div class="grid2">
+          <div>
+            <label for="dp1">Decoy passphrase</label>
+            <input id="dp1" type="password" autocomplete="new-password">
+          </div>
+          <div>
+            <label for="dp2">Repeat it</label>
+            <input id="dp2" type="password" autocomplete="new-password">
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button id="setDuress" type="button">Set the decoy</button>
+          <button class="ghost hidden" id="dropDuress" type="button">Remove it</button>
+        </div>
+        <p class="mut" style="margin:8px 0 0;font-size:.8rem">A second passphrase opens an empty vault of its own, with its own key. Nothing marks it as a decoy, because a marker would defeat it.</p>
+      </fieldset>
+
+      <fieldset class="settings">
+        <legend data-i18n="storage">Storage and health</legend>
+        <p class="mut" id="storageOut" style="margin:0 0 10px;font-size:.82rem"></p>
+        <div class="row">
+          <button class="ghost" id="runHealth" type="button" data-i18n="verifyAll">Verify every record</button>
+          <button class="ghost" id="runTests" type="button" data-i18n="runTests">Run the self-tests</button>
+        </div>
+        <pre id="healthOut" class="mut"></pre>
+        <p class="mut" style="margin:6px 0 0;font-size:.8rem">Last encrypted export: <span id="exportSum">never</span></p>
+      </fieldset>
+
+      <details class="help">
+        <summary>Keyboard</summary>
+        <p style="margin:8px 0 0"><kbd>N</kbd> new patient · <kbd>/</kbd> search · <kbd>Esc</kbd> close ·
+        <kbd>Ctrl</kbd>+<kbd>S</kbd> save the note · <kbd>L</kbd> lock · <kbd>S</kbd> settings · <kbd>?</kbd> this list</p>
+      </details>
     </div>
 
     <div class="card hidden" id="editor">
       <div class="spread">
         <h2 style="margin:0;font-size:1rem" id="edTitle">Patient</h2>
-        <div class="row"><button class="ghost" id="edClose">Close</button><button class="danger" id="edDelete">Delete</button></div>
+        <div class="row no-print"><button class="ghost" id="printRecord" type="button" title="Print this record" data-i18n="print">Print</button><button class="ghost" id="edClose" data-i18n="close">Close</button><button class="danger" id="edDelete" data-i18n="del">Delete</button></div>
       </div>
       <label for="pLabel">Label — initials or a code, <b>not</b> a full name</label>
       <input id="pLabel" maxlength="40">
       <p class="mut" style="margin:6px 0 0;font-size:.8rem">The device may be shared, and the label is the field most likely to be seen on a lock screen. A code protects the patient.</p>
-      <label for="nDate">Note date</label>
-      <input id="nDate" type="date">
+      <div class="grid2">
+        <div>
+          <label for="nDate">Note date</label>
+          <input id="nDate" type="date">
+        </div>
+        <div>
+          <label for="nSeverity">Severity (1 mild → 4 marked)</label>
+          <select id="nSeverity">
+            <option value="1">1 — mild</option>
+            <option value="2">2 — moderate</option>
+            <option value="3">3 — marked</option>
+            <option value="4">4 — severe</option>
+          </select>
+        </div>
+      </div>
       <label for="nText">Note</label>
       <textarea id="nText" rows="6"></textarea>
       <label for="nTags">Tags (comma separated)</label>
       <input id="nTags">
-      <div class="row" style="margin-top:12px"><button id="edSave">Save</button><span class="mut" id="edSaved"></span></div>
-      <h3 style="font-size:.9rem;margin:16px 0 4px">Timeline</h3>
+      <div class="row" style="margin-top:12px"><button id="edSave" data-i18n="save">Save</button><span class="mut" id="edSaved"></span></div>
+      <h3 style="font-size:.9rem;margin:16px 0 4px" data-i18n="severityOver">Severity over time</h3>
+      <div id="edSpark"></div>
+      <h3 style="font-size:.9rem;margin:16px 0 4px" data-i18n="timeline">Timeline</h3>
       <ul class="plain" id="edTimeline"></ul>
+      <h3 style="font-size:.9rem;margin:16px 0 4px" data-i18n="earlier">Earlier versions</h3>
+      <ul class="plain" id="edHistory"></ul>
+      <p class="mut" style="font-size:.78rem;margin:8px 0 0">Every save keeps the previous ciphertext, up to five versions. Restoring one is itself a save, so nothing is lost.</p>
     </div>
 
     <p class="mut" style="font-size:.78rem;margin:14px 0 40px">Auto-locks after <span id="autoMin">5</span> minutes idle. Your data stays on this device: there is no server to reset a forgotten passphrase. <span class="mut">· <span id="buildStamp">build</span></span></p>
@@ -146,6 +320,7 @@ ul.plain li:first-child{border-top:0}
 <script src="search-kit.js"></script>
 <script src="export-kit.js"></script>
 <script src="web-kit.js"></script>
+<script src="i18n-kit.js"></script>
 <script>
 'use strict';
 /* Encrypted Case Log — composes crypto-kit, case-kit, search-kit, export-kit and
@@ -161,9 +336,13 @@ ul.plain li:first-child{border-top:0}
        ciphertext, and a plaintext index on disk would leak what we encrypted. */
 (function () {
   var KDF_ITERS = 600000, AAD_DEK = 'ecl-dek-v1', AAD_VERIFY = 'ecl-verify-v1';
+  /* the current cost of deriving a key-encryption key; a vault written with
+     fewer rounds is re-wrapped at this one on its next unlock. */
+  var KDF_TARGET = KDF_ITERS;
   /* bumped by hand on every release, printed in the footer, so "am I on the new one?"
      is answerable from the page itself. */
   var BUILD = '2026-11-01';
+  var APP_VERSION = '1.1.0';
   /* ?demo=1 opens a SAMPLE vault held entirely in memory: no IndexedDB, nothing
      written down. It is what the landing page embeds and what the screenshots show. */
   var DEMO = typeof location !== "undefined" && /[?&]demo=1/.test(location.search);
@@ -172,32 +351,38 @@ ul.plain li:first-child{border-top:0}
 
   /* ---------------------------------------------------------------- the store
      IndexedDB in the browser; an in-memory store when there is none, so the
-     self-tests run headlessly without pretending IndexedDB exists.            */
+     self-tests run headlessly without pretending IndexedDB exists.
+
+     Two namespaces: meta/records is the vault you opened, dmeta/drecords is a
+     decoy vault opened by the duress passphrase. They are indistinguishable from
+     the outside, which is the whole point of a decoy.                          */
+  var STORES = ["meta", "records", "dmeta", "drecords"];
+  var NS = { meta: "meta", recs: "records" };
+  function useVault(kind) {
+    NS.meta = kind === "decoy" ? "dmeta" : "meta";
+    NS.recs = kind === "decoy" ? "drecords" : "records";
+  }
+
   var Store = (function () {
     var mem = null;
     function hasIDB() { if (DEMO) return false; try { return typeof indexedDB !== "undefined" && !!indexedDB; } catch (e) { return false; } }
+    function blank() { var m = {}; STORES.forEach(function (k) { m[k] = {}; }); return m; }
     function open() {
       return new Promise(function (res, rej) {
-        var r = indexedDB.open("ecl", 1);
+        var r = indexedDB.open("ecl", 2);           // v2 added the decoy stores
         r.onupgradeneeded = function () {
           var d = r.result;
           if (!d.objectStoreNames.contains("meta")) d.createObjectStore("meta");
           if (!d.objectStoreNames.contains("records")) d.createObjectStore("records", { keyPath: "id" });
+          if (!d.objectStoreNames.contains("dmeta")) d.createObjectStore("dmeta");
+          if (!d.objectStoreNames.contains("drecords")) d.createObjectStore("drecords", { keyPath: "id" });
         };
         r.onsuccess = function () { res(r.result); };
         r.onerror = function () { rej(r.error); };
       });
     }
-    function tx(db, store, mode, fn) {
-      return new Promise(function (res, rej) {
-        var t = db.transaction(store, mode), s = t.objectStore(store), out;
-        out = fn(s);
-        t.oncomplete = function () { res(out && out.result !== undefined ? out.result : out); };
-        t.onerror = function () { rej(t.error); };
-      });
-    }
     return {
-      memory: function () { if (!mem) mem = { meta: {}, records: {} }; return mem; },
+      memory: function () { if (!mem) mem = blank(); return mem; },
       get: function (store, key) {
         if (!hasIDB()) return Promise.resolve(Store.memory()[store][key]);
         return open().then(function (db) {
@@ -235,12 +420,14 @@ ul.plain li:first-child{border-top:0}
           });
         });
       },
-      wipe: function () {
-        if (!hasIDB()) { mem = null; return Promise.resolve(); }
+      /* clears the named stores; the vault you are in, by default */
+      wipe: function (names) {
+        names = names || [NS.meta, NS.recs];
+        if (!hasIDB()) { var m = Store.memory(); names.forEach(function (n) { m[n] = {}; }); return Promise.resolve(); }
         return open().then(function (db) {
           return new Promise(function (res) {
-            var t = db.transaction(["meta", "records"], "readwrite");
-            t.objectStore("meta").clear(); t.objectStore("records").clear();
+            var t = db.transaction(names, "readwrite");
+            names.forEach(function (n) { t.objectStore(n).clear(); });
             t.oncomplete = function () { res(); };
           });
         });
@@ -249,72 +436,145 @@ ul.plain li:first-child{border-top:0}
   })();
 
   /* ---------------------------------------------------------------- the vault */
+  var HISTORY_KEEP = 5;          // encrypted snapshots kept per record
+
   var Vault = {
-    dek: null,                 // in memory ONLY, cleared on lock
-    header: null,
-    create: function (passphrase) {
+    dek: null,                   // in memory ONLY, cleared on lock
+    header: null,                // the ACTIVE header (main, or the decoy)
+    _main: null, _duress: null,
+    decoy: false,
+    h: function () { return Vault.header; },
+    /* builds a header + DEK without touching the active vault */
+    _makeHeader: function (passphrase) {
       var salt = CryptoKit.randomBytes(16);
-      return CryptoKit.deriveKey(passphrase, salt, KDF_ITERS).then(function (kek) {
+      return CryptoKit.deriveKey(passphrase, salt, KDF_TARGET).then(function (kek) {
         return CryptoKit.newKey().then(function (dek) {
           return CryptoKit.exportKey(dek).then(function (raw) {
             return CryptoKit.encrypt(kek, raw, { aad: CryptoKit.bytes.fromText(AAD_DEK) }).then(function (wrapped) {
               return CryptoKit.encrypt(dek, CryptoKit.bytes.fromText(VERIFIER), { aad: CryptoKit.bytes.fromText(AAD_VERIFY) })
                 .then(function (ver) {
-                  var h = {
-                    v: 1, kdf: "PBKDF2-SHA256", iters: KDF_ITERS,
+                  return { dek: dek, header: {
+                    v: 1, kdf: "PBKDF2-SHA256", iters: KDF_TARGET,
                     salt: CryptoKit.bytes.toBase64(salt),
                     wrapped: { iv: CryptoKit.bytes.toBase64(wrapped.iv), ct: CryptoKit.bytes.toBase64(wrapped.ct) },
                     verifier: { iv: CryptoKit.bytes.toBase64(ver.iv), ct: CryptoKit.bytes.toBase64(ver.ct) },
                     recovery: null, created: Date.now()
-                  };
-                  Vault.dek = dek; Vault.header = h;
-                  return Store.put("meta", h, "header").then(function () { return h; });
+                  } };
                 });
             });
           });
         });
       });
     },
+    create: function (passphrase) {
+      return Vault._makeHeader(passphrase).then(function (made) {
+        useVault("main"); Vault.decoy = false;
+        Vault.dek = made.dek; Vault.header = made.header; Vault._main = made.header;
+        return Store.put(NS.meta, made.header, "header").then(function () { return made.header; });
+      });
+    },
     /* the recovery code wraps the SAME DEK, so it survives a forgotten passphrase
-       without ever re-encrypting a record. */
+       without ever re-encrypting a record. Calling it again ROTATES the code: the
+       old one stops working, because the header only holds one. */
     setRecovery: function () {
       var bytes = CryptoKit.randomBytes(24);            // 192 bits -> 24 words of 8 bits
       var words = []; for (var i = 0; i < 24; i++) words.push(WORDS[bytes[i]]);
       var code = words.join(" ");
-      return CryptoKit.deriveKey(code, CryptoKit.bytes.fromText("ecl-recovery-salt"), KDF_ITERS)
+      return CryptoKit.deriveKey(code, CryptoKit.bytes.fromText("ecl-recovery-salt"), KDF_TARGET)
         .then(function (rk) {
           return CryptoKit.exportKey(Vault.dek).then(function (raw) {
             return CryptoKit.encrypt(rk, raw, { aad: CryptoKit.bytes.fromText(AAD_DEK) });
           });
         }).then(function (w) {
           Vault.header.recovery = { iv: CryptoKit.bytes.toBase64(w.iv), ct: CryptoKit.bytes.toBase64(w.ct) };
-          return Store.put("meta", Vault.header, "header").then(function () { return code; });
+          if (Vault.decoy) Vault._duress = Vault.header; else Vault._main = Vault.header;
+          return Store.put(NS.meta, Vault.header, "header").then(function () { return code; });
         });
     },
-    _openWith: function (kek) {
-      var h = Vault.header;
-      var box = { iv: CryptoKit.bytes.fromBase64(h.wrapped.iv), ct: CryptoKit.bytes.fromBase64(h.wrapped.ct) };
+    _openWith: function (header, kek) {
+      var box = { iv: CryptoKit.bytes.fromBase64(header.wrapped.iv), ct: CryptoKit.bytes.fromBase64(header.wrapped.ct) };
       return CryptoKit.decrypt(kek, box, { aad: CryptoKit.bytes.fromText(AAD_DEK) })
         .then(function (raw) { return CryptoKit.importKey(raw); });
     },
+    _try: function (header, passphrase) {
+      return CryptoKit.deriveKey(passphrase, CryptoKit.bytes.fromBase64(header.salt), header.iters)
+        .then(function (kek) { return Vault._openWith(header, kek); })
+        .then(function (dek) { return Vault._verifyWith(header, dek).then(function () { return dek; }); });
+    },
+    /* a passphrase opens the main vault, or failing that the decoy vault. There is
+       no marker anywhere: the decoy looks like the only vault there is. */
     unlock: function (passphrase) {
-      var h = Vault.header;
-      return CryptoKit.deriveKey(passphrase, CryptoKit.bytes.fromBase64(h.salt), h.iters)
-        .then(function (kek) { return Vault._openWith(kek); })
-        .then(function (dek) { return Vault._verify(dek).then(function () { Vault.dek = dek; return true; }); });
+      var main = Vault._main || Vault.header;
+      var first = main ? Vault._try(main, passphrase) : Promise.reject(new Error("no vault"));
+      return first.then(function (dek) {
+          useVault("main"); Vault.decoy = false; Vault.header = main; Vault.dek = dek;
+          return Vault._upgrade(main, passphrase).then(function () { return "main"; });
+        }, function () {
+          if (!Vault._duress) throw new Error("bad passphrase");
+          return Vault._try(Vault._duress, passphrase).then(function (dek) {
+            useVault("decoy"); Vault.decoy = true; Vault.header = Vault._duress; Vault.dek = dek;
+            return "decoy";
+          }, function () { throw new Error("bad passphrase"); });
+        });
     },
     recover: function (code) {
-      if (!Vault.header.recovery) return Promise.reject(new Error("no recovery code was set for this vault"));
-      var box = { iv: CryptoKit.bytes.fromBase64(Vault.header.recovery.iv), ct: CryptoKit.bytes.fromBase64(Vault.header.recovery.ct) };
-      return CryptoKit.deriveKey(code.trim().toLowerCase(), CryptoKit.bytes.fromText("ecl-recovery-salt"), KDF_ITERS)
+      var h = Vault.header || Vault._main;
+      if (!h || !h.recovery) return Promise.reject(new Error("no recovery code was set for this vault"));
+      var box = { iv: CryptoKit.bytes.fromBase64(h.recovery.iv), ct: CryptoKit.bytes.fromBase64(h.recovery.ct) };
+      return CryptoKit.deriveKey(code.trim().toLowerCase(), CryptoKit.bytes.fromText("ecl-recovery-salt"), KDF_TARGET)
         .then(function (rk) { return CryptoKit.decrypt(rk, box, { aad: CryptoKit.bytes.fromText(AAD_DEK) }); })
         .then(function (raw) { return CryptoKit.importKey(raw); })
-        .then(function (dek) { return Vault._verify(dek).then(function () { Vault.dek = dek; return true; }); });
+        .then(function (dek) { return Vault._verifyWith(h, dek).then(function () { Vault.dek = dek; return true; }); });
+    },
+    /* a legacy header with fewer rounds is re-wrapped at the current target on the
+       next unlock. The passphrase is the only thing that can do it, so it happens
+       here and nowhere else. */
+    _upgrade: function (header, passphrase) {
+      if (!header || header.iters >= KDF_TARGET) return Promise.resolve(false);
+      var salt = CryptoKit.randomBytes(16);
+      return CryptoKit.deriveKey(passphrase, salt, KDF_TARGET).then(function (kek) {
+        return CryptoKit.exportKey(Vault.dek).then(function (raw) {
+          return CryptoKit.encrypt(kek, raw, { aad: CryptoKit.bytes.fromText(AAD_DEK) });
+        }).then(function (wrapped) {
+          header.iters = KDF_TARGET; header.salt = CryptoKit.bytes.toBase64(salt);
+          header.wrapped = { iv: CryptoKit.bytes.toBase64(wrapped.iv), ct: CryptoKit.bytes.toBase64(wrapped.ct) };
+          return Store.put(NS.meta, header, "header").then(function () { return true; });
+        });
+      });
+    },
+    /* the passphrase only WRAPS the DEK, so this never re-encrypts a record */
+    changePassphrase: function (newPassphrase) {
+      var salt = CryptoKit.randomBytes(16);
+      return CryptoKit.deriveKey(newPassphrase, salt, KDF_TARGET).then(function (kek) {
+        return CryptoKit.exportKey(Vault.dek).then(function (raw) {
+          return CryptoKit.encrypt(kek, raw, { aad: CryptoKit.bytes.fromText(AAD_DEK) });
+        }).then(function (wrapped) {
+          Vault.header.iters = KDF_TARGET; Vault.header.salt = CryptoKit.bytes.toBase64(salt);
+          Vault.header.wrapped = { iv: CryptoKit.bytes.toBase64(wrapped.iv), ct: CryptoKit.bytes.toBase64(wrapped.ct) };
+          if (Vault.decoy) Vault._duress = Vault.header; else Vault._main = Vault.header;
+          return Store.put(NS.meta, Vault.header, "header");
+        });
+      });
+    },
+    /* a second vault behind a second passphrase, with its own DEK and its own
+       records. Whatever is written while it is open goes there and nowhere else. */
+    setDuress: function (passphrase) {
+      return Vault._makeHeader(passphrase).then(function (made) {
+        return Store.put("dmeta", made.header, "header").then(function () {
+          Vault._duress = made.header;
+          return made.header;
+        });
+      });
+    },
+    hasDuress: function () { return !!Vault._duress; },
+    removeDuress: function () {
+      Vault._duress = null;
+      return Store.wipe(["dmeta", "drecords"]);
     },
     /* the verifier makes a wrong passphrase fail CLEANLY instead of silently
        producing garbage - AES-GCM would fail anyway, but a clear error is kinder. */
-    _verify: function (dek) {
-      var v = Vault.header.verifier;
+    _verifyWith: function (header, dek) {
+      var v = header.verifier;
       var box = { iv: CryptoKit.bytes.fromBase64(v.iv), ct: CryptoKit.bytes.fromBase64(v.ct) };
       return CryptoKit.decrypt(dek, box, { aad: CryptoKit.bytes.fromText(AAD_VERIFY) })
         .then(function (pt) {
@@ -322,75 +582,277 @@ ul.plain li:first-child{border-top:0}
           return true;
         }, function () { throw new Error("bad passphrase"); });
     },
+    _verify: function (dek) { return Vault._verifyWith(Vault.header, dek); },
     lock: function () { Vault.dek = null; }
   };
 
   /* -------------------------------------------------------------- the records */
+  function decryptRow(row) {
+    var box = { iv: CryptoKit.bytes.fromBase64(row.iv), ct: CryptoKit.bytes.fromBase64(row.ct) };
+    return CryptoKit.decrypt(Vault.dek, box, { aad: CryptoKit.bytes.fromText(row.id) })
+      .then(function (pt) { return JSON.parse(CryptoKit.bytes.toText(pt)); },
+            function () { return { id: row.id, title: "(unreadable)", broken: true }; });
+  }
+
   var Records = {
     put: function (rec) {
       var id = rec.id, plain = CryptoKit.bytes.fromText(JSON.stringify(rec));
-      // a FRESH 96-bit IV every time, and the id as AAD: a swapped record fails.
-      return CryptoKit.encrypt(Vault.dek, plain, { aad: CryptoKit.bytes.fromText(id) })
-        .then(function (box) {
-          return Store.put("records", {
-            id: id, iv: CryptoKit.bytes.toBase64(box.iv), ct: CryptoKit.bytes.toBase64(box.ct),
-            updatedAt: Date.now(), rev: (rec.rev || 0) + 1
-          });
-        }).then(function () { return rec; });
-    },
-    all: function () {
-      return Store.all("records").then(function (rows) {
-        return Promise.all(rows.map(function (row) {
-          var box = { iv: CryptoKit.bytes.fromBase64(row.iv), ct: CryptoKit.bytes.fromBase64(row.ct) };
-          return CryptoKit.decrypt(Vault.dek, box, { aad: CryptoKit.bytes.fromText(row.id) })
-            .then(function (pt) { return JSON.parse(CryptoKit.bytes.toText(pt)); },
-                  function () { return { id: row.id, title: "(unreadable)", broken: true }; });
-        }));
+      return Store.get(NS.recs, id).then(function (prev) {
+        var hist = (prev && prev.history ? prev.history : []).slice(-HISTORY_KEEP);
+        /* the PREVIOUS ciphertext is kept as-is: it is already encrypted under the
+           same DEK and the same AAD, so a snapshot leaks nothing new */
+        if (prev && prev.ct) hist.push({ iv: prev.iv, ct: prev.ct, rev: prev.rev || 0, at: prev.updatedAt || 0 });
+        // a FRESH 96-bit IV every time, and the id as AAD: a swapped record fails.
+        return CryptoKit.encrypt(Vault.dek, plain, { aad: CryptoKit.bytes.fromText(id) })
+          .then(function (box) {
+            return Store.put(NS.recs, {
+              id: id, iv: CryptoKit.bytes.toBase64(box.iv), ct: CryptoKit.bytes.toBase64(box.ct),
+              updatedAt: Date.now(), rev: (rec.rev || 0) + 1, history: hist.slice(-HISTORY_KEEP)
+            });
+          }).then(function () { return rec; });
       });
     },
-    del: function (id) { return Store.del("records", id); }
+    allRows: function () { return Store.all(NS.recs); },
+    all: function (opts) {
+      opts = opts || {};
+      return Store.all(NS.recs).then(function (rows) {
+        var live = opts.includeDeleted ? rows : rows.filter(function (r) { return !r.deleted; });
+        return Promise.all(live.map(decryptRow));
+      });
+    },
+    /* unlock decrypts in batches so a large vault paints early instead of
+       blocking on one pass over everything. */
+    each: function (size, onBatch) {
+      return Store.all(NS.recs).then(function (rows) {
+        var live = rows.filter(function (r) { return !r.deleted; });
+        var out = [], i = 0;
+        function step() {
+          var slice = live.slice(i, i + size); i += size;
+          if (!slice.length) return Promise.resolve(out);
+          return Promise.all(slice.map(decryptRow)).then(function (recs) {
+            out = out.concat(recs);
+            return onBatch(out.slice(), i >= live.length);
+          }).then(function () { return i >= live.length ? out : step(); });
+        }
+        return step();
+      });
+    },
+    /* soft delete: the row stays as a tombstone until the vault is locked, so an
+       accidental delete can be undone. */
+    del: function (id) {
+      return Store.get(NS.recs, id).then(function (row) {
+        if (!row) return null;
+        row.deleted = Date.now();
+        return Store.put(NS.recs, row).then(function () { return row; });
+      });
+    },
+    restore: function (id) {
+      return Store.get(NS.recs, id).then(function (row) {
+        if (!row) return null;
+        delete row.deleted;
+        return Store.put(NS.recs, row).then(function () { return row; });
+      });
+    },
+    purge: function () {
+      return Store.all(NS.recs).then(function (rows) {
+        return Promise.all(rows.filter(function (r) { return r.deleted; }).map(function (r) { return Store.del(NS.recs, r.id); }));
+      });
+    },
+    history: function (id) {
+      return Store.get(NS.recs, id).then(function (row) {
+        if (!row || !row.history) return [];
+        return Promise.all(row.history.map(function (h) {
+          var box = { iv: CryptoKit.bytes.fromBase64(h.iv), ct: CryptoKit.bytes.fromBase64(h.ct) };
+          return CryptoKit.decrypt(Vault.dek, box, { aad: CryptoKit.bytes.fromText(id) })
+            .then(function (pt) { var r = JSON.parse(CryptoKit.bytes.toText(pt)); r._at = h.at; r._rev = h.rev; return r; },
+                  function () { return null; });
+        })).then(function (list) { return list.filter(Boolean); });
+      });
+    },
+    /* re-writes a past snapshot as the current record (the snapshot itself is kept) */
+    restoreVersion: function (id, at) {
+      return Records.history(id).then(function (list) {
+        var pick = list.filter(function (r) { return r._at === at; })[0] || list[list.length - 1];
+        if (!pick) throw new Error("that version is gone");
+        delete pick._at; delete pick._rev;
+        return Records.put(pick).then(function () { return pick; });
+      });
+    },
+    /* every record, decrypted once, to answer "is this vault intact?" */
+    verify: function () {
+      return Store.all(NS.recs).then(function (rows) {
+        return Promise.all(rows.map(decryptRow)).then(function (recs) {
+          var broken = recs.filter(function (r) { return r.broken; });
+          return { total: rows.length, ok: rows.length - broken.length, broken: broken.map(function (r) { return r.id; }) };
+        });
+      });
+    }
   };
 
   /* ------------------------------------------------------------------ the app */
-  var state = { patients: [], index: null, editing: null, idle: 0, autoMin: 5 };
+  var DEFAULT_SETTINGS = { autoMin: 5, lockOnHide: false, wipeAfter: 5, lang: "en", fontScale: 1, redact: false, backupEvery: 10 };
+  function defaults(o) {
+    var r = {}, k;
+    for (k in DEFAULT_SETTINGS) r[k] = DEFAULT_SETTINGS[k];
+    for (k in (o || {})) if (o[k] !== undefined) r[k] = o[k];
+    return r;
+  }
+  var state = {
+    patients: [], index: null, indexDirty: true, editing: null, idle: 0,
+    settings: defaults(null), lastExport: 0, notesSinceExport: 0,
+    tagFilter: "", fromFilter: "", toFilter: "", undo: null, failures: 0, progress: 0
+  };
   function $(i) { return document.getElementById(i); }
   function show(id, on) { $(id).classList[on ? "remove" : "add"]("hidden"); }
   function toast(m) { var t = $("toast"); t.textContent = m; t.classList.add("on"); setTimeout(function () { t.classList.remove("on"); }, 2200); }
+  /* a toast that carries an action — the undo a destructive click deserves */
+  function toastAction(msg, label, fn) {
+    var t = $("toast");
+    t.textContent = "";
+    var span = document.createElement("span"); span.textContent = msg;
+    var b = document.createElement("button"); b.type = "button"; b.className = "ghost"; b.textContent = label;
+    b.style.marginLeft = "10px";
+    b.onclick = function () { t.classList.remove("on"); fn(); };
+    t.appendChild(span); t.appendChild(b); t.classList.add("on");
+    clearTimeout(state.undo);
+    state.undo = setTimeout(function () { t.classList.remove("on"); }, 8000);
+  }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]; }); }
 
-  function refresh() {
-    return Records.all().then(function (rows) {
-      state.patients = rows.sort(function (a, b) { return (b.updated || 0) - (a.updated || 0); });
-      render();
+  function loadSettings() {
+    return Store.get(NS.meta, "settings").then(function (s) {
+      state.settings = defaults(s);
+      return Store.get(NS.meta, "backup").then(function (b) {
+        if (b) { state.lastExport = b.at || 0; state.notesSinceExport = b.since || 0; }
+        applySettings();
+        return state.settings;
+      });
     });
   }
+  function saveSettings() { return Store.put(NS.meta, state.settings, "settings"); }
+  function saveBackupState() { return Store.put(NS.meta, { at: state.lastExport, since: state.notesSinceExport }, "backup"); }
+
+  /* settings that are visible rather than stored: type size and the redaction
+     curtain a shared screen deserves. */
+  function applySettings() {
+    var f = Number(state.settings.fontScale) || 1;
+    document.documentElement.style.setProperty("--scale", String(f));
+    document.body.classList[f > 1 ? "add" : "remove"]("big-text");
+    document.body.classList[state.settings.redact ? "add" : "remove"]("redact");
+    var lang = $("langSel"); if (lang) lang.value = state.settings.lang || "en";
+    var am = $("setAutoMin"); if (am) am.value = state.settings.autoMin;
+    var lh = $("setLockHide"); if (lh) lh.checked = !!state.settings.lockOnHide;
+    var wa = $("setWipe"); if (wa) wa.value = state.settings.wipeAfter;
+    var fs = $("setFont"); if (fs) fs.value = String(f);
+    if (window.ECL_I18N) window.ECL_I18N.apply(state.settings.lang || "en");
+  }
+
+  function byUpdated(a, b) { return (b.updated || 0) - (a.updated || 0); }
+
+  function refresh() {
+    state.progress = 0;
+    /* batched: a large vault paints after the first 250 records instead of after
+       all of them */
+    return Records.each(250, function (rows) {
+      state.patients = rows.sort(byUpdated);
+      state.indexDirty = true; state.progress = rows.length;
+      render();
+    }).then(function (rows) {
+      state.patients = rows.sort(byUpdated); state.indexDirty = true;
+      state.progress = 0;                       // done: stop advertising the count
+      render();
+      return rows;
+    });
+  }
+
+  function patientTags(p) {
+    var seen = {}, out = [];
+    (p.symptoms || []).forEach(function (n) {
+      (n.tags || []).forEach(function (t) { if (t && !seen[t]) { seen[t] = 1; out.push(t); } });
+    });
+    return out;
+  }
+  function inDateRange(p) {
+    if (!state.fromFilter && !state.toFilter) return true;
+    var from = state.fromFilter ? new Date(state.fromFilter + "T00:00:00").getTime() : -Infinity;
+    var to = state.toFilter ? new Date(state.toFilter + "T23:59:59").getTime() : Infinity;
+    return (p.symptoms || []).some(function (n) { return n.date >= from && n.date <= to; });
+  }
+
   function render() {
     var q = $("q").value.trim();
     var list = state.patients;
     if (q) {
       // you cannot search ciphertext: this index is built in memory, on unlock,
       // and thrown away on lock. Nothing plaintext is ever written down.
-      state.index = Search.index(state.patients.map(function (p) {
-        return { id: p.id, text: [p.title, (p.symptoms || []).map(function (n) { return n.note + " " + (n.tags || []).join(" "); }).join(" ")].join(" ") };
-      }));
-      var hits = state.index.query(q, { limit: 50 }) || [];   // search-kit returns an array
+      // Built once per data change, NOT once per keystroke.
+      if (!state.index || state.indexDirty) {
+        state.index = Search.index(state.patients.map(function (p) {
+          return { id: p.id, text: [p.title, (p.symptoms || []).map(function (n) { return n.note + " " + (n.tags || []).join(" "); }).join(" ")].join(" ") };
+        }));
+        state.indexDirty = false;
+      }
+      var hits = state.index.query(q, { limit: 200 }) || [];   // search-kit returns an array
       var keep = {}; hits.forEach(function (h) { keep[h.item.id] = 1; });
       list = state.patients.filter(function (p) { return keep[p.id]; });
       $("searchNote").textContent = hits.length + " match(es) across " + state.patients.length + " record(s), decrypted in memory.";
     } else {
-      state.index = null; $("searchNote").textContent = "";
+      $("searchNote").textContent = state.progress ? state.progress + " record(s) decrypted…" : "";
     }
+    if (state.tagFilter) list = list.filter(function (p) { return patientTags(p).indexOf(state.tagFilter) !== -1; });
+    list = list.filter(inDateRange);
+
+    var red = state.settings.redact;
     $("patients").innerHTML = list.map(function (p) {
       var n = (p.symptoms || []).length;
-      return '<li><span><b>' + esc(p.title || "(no label)") + '</b> <span class="mut">· ' + n + ' note' + (n === 1 ? "" : "s") + '</span></span>'
-        + '<button class="ghost" data-open="' + esc(p.id) + '">Open</button></li>';
+      var sev = (p.symptoms || []).reduce(function (m, x) { return Math.max(m, x.severity || 1); }, 1);
+      var label = red ? '<span class="redactable">' + esc(p.title || "(no label)") + '</span>' : esc(p.title || "(no label)");
+      return '<li><span><b>' + label + '</b> <span class="mut">· ' + n + ' note' + (n === 1 ? "" : "s") + '</span></span>'
+        + '<span class="row"><span class="pill sev s' + sev + '">sev ' + sev + '</span>'
+        + '<button class="ghost" data-open="' + esc(p.id) + '">Open</button></span></li>';
     }).join("");
     $("noPatients").classList[list.length ? "add" : "remove"]("hidden");
     $("recCount").textContent = state.patients.length + " record(s)";
+
+    /* the tag filter offers only tags that exist, so it cannot be a dead end */
+    var tags = {}; state.patients.forEach(function (p) { patientTags(p).forEach(function (t) { tags[t] = 1; }); });
+    var sel = $("tagFilter");
+    if (sel) {
+      var names = Object.keys(tags).sort();
+      sel.innerHTML = '<option value="">All tags</option>' + names.map(function (t) {
+        return '<option value="' + esc(t) + '"' + (t === state.tagFilter ? " selected" : "") + '>' + esc(t) + '</option>';
+      }).join("");
+    }
     Array.prototype.forEach.call($("patients").querySelectorAll("[data-open]"), function (b) {
       b.onclick = function () { openPatient(b.getAttribute("data-open")); };
     });
+    var nudge = $("backupNudge");
+    if (nudge) {
+      var due = state.notesSinceExport >= (state.settings.backupEvery || 10);
+      nudge.classList[due ? "remove" : "add"]("hidden");
+      var nudgeText = nudge.querySelector && nudge.querySelector("b");
+      if (due && nudgeText) nudgeText.textContent = state.notesSinceExport + " notes since your last encrypted backup.";
+    }
   }
+
+  /* severity over time, as hand-rolled SVG — no chart library, no network */
+  function sparkline(p) {
+    var ns = (p.symptoms || []).slice().sort(function (a, b) { return a.date - b.date; });
+    if (ns.length < 2) return "";
+    var w = 240, h = 46, pad = 5;
+    var pts = ns.map(function (n, i) {
+      var x = pad + (w - 2 * pad) * (i / (ns.length - 1));
+      var sv = Math.max(1, Math.min(4, n.severity || 1));
+      var y = h - pad - (h - 2 * pad) * ((sv - 1) / 3);
+      return [x, y];
+    });
+    var d = pts.map(function (pt, i) { return (i ? "L" : "M") + pt[0].toFixed(1) + " " + pt[1].toFixed(1); }).join(" ");
+    var dots = pts.map(function (pt) { return '<circle cx="' + pt[0].toFixed(1) + '" cy="' + pt[1].toFixed(1) + '" r="2.2"/>'; }).join("");
+    return '<svg class="spark" viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" height="' + h + '" role="img" '
+      + 'aria-label="Severity over ' + ns.length + ' notes, latest ' + Math.max(1, Math.min(4, ns[ns.length - 1].severity || 1)) + ' of 4">'
+      + '<path d="' + d + '" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' + dots + '</svg>';
+  }
+
   function openPatient(id) {
     var p = state.patients.filter(function (x) { return x.id === id; })[0]; if (!p) return;
     state.editing = p;
@@ -399,11 +861,40 @@ ul.plain li:first-child{border-top:0}
     var last = (p.symptoms || [])[p.symptoms.length - 1];
     $("nDate").value = (last && new Date(last.date).toISOString().slice(0, 10)) || new Date().toISOString().slice(0, 10);
     $("nText").value = ""; $("nTags").value = "";
-    $("edTimeline").innerHTML = Case.timeline(p).slice().reverse().map(function (n) {
-      return '<li><span><span class="mut">' + esc(new Date(n.date).toISOString().slice(0, 10)) + '</span> ' + esc(n.text) + '</span>'
+    $("nSeverity").value = String(last ? (last.severity || 1) : 1);
+    var tl = Case.timeline(p).slice().reverse();
+    $("edTimeline").innerHTML = tl.map(function (n) {
+      var sv = Math.max(1, Math.min(4, n.severity || 1));
+      return '<li><span><span class="mut">' + esc(new Date(n.date).toISOString().slice(0, 10)) + '</span> '
+        + '<span class="pill sev s' + sv + '">sev ' + sv + '</span> ' + esc(n.text) + '</span>'
         + (n.tags && n.tags.length ? '<span class="pill">' + esc(n.tags.join(", ")) + '</span>' : "") + '</li>';
     }).join("") || '<li class="mut">No notes yet.</li>';
+    var sp = $("edSpark");
+    if (sp) sp.innerHTML = sparkline(p);
     show("editor", true);
+    /* earlier versions of this record, if any: the ciphertext history is already
+       on disk, so this costs one decrypt each */
+    Records.history(p.id).then(function (list) {
+      var box = $("edHistory");
+      if (!box) return;
+      box.innerHTML = list.length
+        ? list.slice().reverse().map(function (v) {
+            var at = v._at || 0;
+            return '<li><span><span class="mut">' + esc(new Date(at).toLocaleString()) + '</span> · '
+              + esc((v.title || "(no label)")) + ' · ' + ((v.symptoms || []).length) + ' note(s)</span>'
+              + '<button class="ghost" data-restore="' + at + '">Restore</button></li>';
+          }).join("")
+        : '<li class="mut">No earlier versions.</li>';
+      Array.prototype.forEach.call(box.querySelectorAll("[data-restore]"), function (b) {
+        b.onclick = function () {
+          if (!confirm("Restore this version over the current one? The current one is kept in the history.")) return;
+          Records.restoreVersion(p.id, Number(b.getAttribute("data-restore")))
+            .then(function () { return refresh(); })
+            .then(function () { openPatient(p.id); toast("Version restored."); })
+            .catch(function (e) { toast(String(e.message || e)); });
+        };
+      });
+    });
   }
   function newPatient() {
     var p = Case.create({ title: "" });   // a case-kit case IS the record shape
@@ -417,9 +908,11 @@ ul.plain li:first-child{border-top:0}
     if (text) {
       // a note is a case-kit symptom: a dated entry with tags. Using the kit's own
       // shape is what makes the interchange carry every field.
-      Case.addSymptom(p, { note: text, severity: 1,
+      Case.addSymptom(p, { note: text, severity: Math.max(1, Math.min(4, Number($("nSeverity").value) || 1)),
         date: new Date(($("nDate").value || new Date().toISOString().slice(0, 10)) + "T00:00:00").getTime(),
         tags: $("nTags").value.split(",").map(function (t) { return t.trim(); }).filter(Boolean) });
+      state.notesSinceExport++;
+      saveBackupState();
     }
     p.updated = Date.now();
     Records.put(p).then(function () {
@@ -427,16 +920,34 @@ ul.plain li:first-child{border-top:0}
       return refresh();
     }).then(function () { if (state.editing) openPatient(state.editing.id); });
   }
+  function deletePatient() {
+    var p = state.editing; if (!p) return;
+    if (!confirm("Delete this patient and every note in it? You can undo for a few seconds; after that it is gone when you lock.")) return;
+    var id = p.id, title = p.title || "record";
+    Records.del(id).then(function () {
+      state.editing = null; show("editor", false);
+      return refresh();
+    }).then(function () {
+      toastAction("Deleted " + title + ".", "Undo", function () {
+        Records.restore(id).then(refresh).then(function () { toast("Restored."); });
+      });
+    });
+  }
   function lock() {
-    Vault.lock(); state.patients = []; state.index = null; state.editing = null;
-    show("appView", false); show("lockView", true); show("unlockRun", true); show("firstRun", false);
-    show("recoverRun", false); show("showRecovery", false); $("lockPill").textContent = "locked";
-    $("pw").value = "";
+    Vault.lock(); state.patients = []; state.index = null; state.indexDirty = true; state.editing = null;
+    state.progress = 0;
+    /* tombstones only survive until the vault closes */
+    Records.purge().catch(function () {}).then(function () {
+      show("appView", false); show("lockView", true); show("unlockRun", true); show("firstRun", false);
+      show("recoverRun", false); show("showRecovery", false); $("lockPill").textContent = "locked";
+      $("pw").value = "";
+      if (state.settings.redact) { state.settings.redact = false; applySettings(); }
+    });
   }
   function enterApp() {
     show("lockView", false); show("appView", true); $("lockPill").textContent = "unlocked";
     if (!DEMO && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {});
-    refresh();
+    return loadSettings().then(refresh);
   }
 
   /* ------------------------------------------------------------- demo + theme
@@ -445,38 +956,43 @@ ul.plain li:first-child{border-top:0}
   var DEMO_PASS = "demo passphrase - nothing is saved";
   var SEED = [
     { title: "R.M.", notes: [
-      { d: -34, t: "Thirst for small quantities, often. Worse at night, better from warmth.", tags: ["night", "thirst"] },
-      { d: -12, t: "Sleep improved, but still wakes at 3 a.m. and cannot settle again.", tags: ["sleep"] },
-      { d: -2,  t: "Same 3 a.m. waking. Repertorised: Ars., Nux-v., Sulph.", tags: ["sleep", "repertory"] } ] },
+      { d: -34, s: 3, t: "Thirst for small quantities, often. Worse at night, better from warmth.", tags: ["night", "thirst"] },
+      { d: -12, s: 2, t: "Sleep improved, but still wakes at 3 a.m. and cannot settle again.", tags: ["sleep"] },
+      { d: -2,  s: 1, t: "Same 3 a.m. waking, milder. Repertorised: Ars., Nux-v., Sulph.", tags: ["sleep", "repertory"] } ] },
     { title: "K-241", notes: [
-      { d: -21, t: "Headache right-sided, behind the eye, worse from light.", tags: ["headache", "light"] },
-      { d: -7,  t: "Headache eased by cold application. Light sensitivity unchanged.", tags: ["headache"] } ] },
+      { d: -21, s: 4, t: "Headache right-sided, behind the eye, worse from light.", tags: ["headache", "light"] },
+      { d: -7,  s: 2, t: "Headache eased by cold application. Light sensitivity unchanged.", tags: ["headache"] } ] },
     { title: "A.B.", notes: [
-      { d: -60, t: "Eczema on the flexures, itching worse from the warmth of the bed.", tags: ["skin", "itching"] },
-      { d: -30, t: "Skin calmer on the current remedy. Sleep undisturbed.", tags: ["skin"] } ] },
+      { d: -60, s: 3, t: "Eczema on the flexures, itching worse from the warmth of the bed.", tags: ["skin", "itching"] },
+      { d: -30, s: 2, t: "Skin calmer on the current remedy. Sleep undisturbed.", tags: ["skin"] } ] },
     { title: "T-08", notes: [
-      { d: -4, t: "Cough dry at night, worse lying down, better sitting up.", tags: ["cough", "night"] } ] },
+      { d: -4, s: 2, t: "Cough dry at night, worse lying down, better sitting up.", tags: ["cough", "night"] } ] },
     { title: "S.N.", notes: [
-      { d: -90, t: "Anxiety before appointments, palpitations, better from company.", tags: ["anxiety"] },
-      { d: -45, t: "Palpitations less frequent. Still uneasy alone in the evening.", tags: ["anxiety"] } ] }
+      { d: -90, s: 3, t: "Anxiety before appointments, palpitations, better from company.", tags: ["anxiety"] },
+      { d: -45, s: 2, t: "Palpitations less frequent. Still uneasy alone in the evening.", tags: ["anxiety"] } ] }
   ];
   function seed() {
     return Vault.create(DEMO_PASS).then(function () {
       return Promise.all(SEED.map(function (s) {
         var p = Case.create({ title: s.title });
         s.notes.forEach(function (n) {
-          Case.addSymptom(p, { note: n.t, severity: 1, date: Date.now() + n.d * 86400000, tags: n.tags });
+          Case.addSymptom(p, { note: n.t, severity: n.s || 1, date: Date.now() + n.d * 86400000, tags: n.tags });
         });
         p.updated = Date.now() + s.notes[s.notes.length - 1].d * 86400000;
         return Records.put(p);
       }));
     });
   }
-  /* #patients | #note | #search | #locked — the landing page's guided buttons move
-     the frame to one of these instead of shipping four screenshots. */
+  /* #patients | #note | #search | #locked drive the embedded demo; #new and
+     #search work in a real vault too, which is what the manifest shortcuts use. */
   function route() {
-    if (!DEMO) return;
-    var r = (location.hash || "#patients").replace(/^#/, "");
+    var r = (location.hash || "").replace(/^#/, "");
+    if (!DEMO) {
+      if (!Vault.dek) return;
+      if (r === "new") newPatient();
+      else if (r === "search" && $("q")) $("q").focus();
+      return;
+    }
     if (r === "locked") { lock(); return; }
     if (!Vault.dek) {
       Vault.unlock(DEMO_PASS).then(function () { enterApp(); return route(); }).catch(function () {});
@@ -488,8 +1004,6 @@ ul.plain li:first-child{border-top:0}
       var pick = state.patients.slice().sort(function (a, b) { return (b.symptoms || []).length - (a.symptoms || []).length; })[0];
       if (pick) {
         openPatient(pick.id);
-        /* the editor sits below the list, so bring it into view — in a frame that is
-           one screenful tall, "nothing happened" is the worst possible answer */
         /* only when embedded: opened on its own, the page should start at the top */
         var ed = $("editor");
         var framed = false;
@@ -523,14 +1037,19 @@ ul.plain li:first-child{border-top:0}
   }
 
   /* ------------------------------------------------------------------ wiring */
+  function on(id, fn) { var el = $(id); if (el) el.onclick = fn; }
+
   function boot() {
     if (DEMO) return startDemo();
-    return Store.get("meta", "header").then(function (h) {
-      if (!h) { show("firstRun", true); show("unlockRun", false); return; }
-      Vault.header = h; show("firstRun", false); show("unlockRun", true);
+    return Promise.all([Store.get("meta", "header"), Store.get("dmeta", "header")]).then(function (both) {
+      Vault._main = both[0] || null;
+      Vault._duress = both[1] || null;
+      Vault.header = Vault._main;
+      if (!Vault._main && !Vault._duress) { show("firstRun", true); show("unlockRun", false); return; }
+      show("firstRun", false); show("unlockRun", true);
     });
   }
-  $("doCreate").onclick = function () {
+  on("doCreate", function () {
     var a = $("pw1").value, b = $("pw2").value;
     if (a.length < 8) { $("pwErr").textContent = "Use at least 8 characters — a passphrase, not a password."; show("pwErr", true); return; }
     if (a !== b) { $("pwErr").textContent = "The two do not match."; show("pwErr", true); return; }
@@ -541,92 +1060,344 @@ ul.plain li:first-child{border-top:0}
       $("rcOut").textContent = code;
       show("firstRun", false); show("showRecovery", true); btn.disabled = false;
     }).catch(function (e) { btn.disabled = false; $("pwErr").textContent = String(e.message || e); show("pwErr", true); });
-  };
+  });
   $("rcAck").onchange = function () { $("rcDone").disabled = !this.checked; };
   $("rcDone").onclick = function () { $("rcOut").textContent = ""; enterApp(); };
-  $("doUnlock").onclick = function () {
+  on("doUnlock", function () {
     var btn = this; btn.disabled = true;
-    Vault.unlock($("pw").value).then(function () { btn.disabled = false; show("unErr", false); enterApp(); })
-      .catch(function () { btn.disabled = false; $("unErr").textContent = "That passphrase does not open this vault."; show("unErr", true); });
-  };
+    Vault.unlock($("pw").value).then(function () {
+      btn.disabled = false; show("unErr", false); state.failures = 0; return enterApp();
+    }).catch(function () {
+      btn.disabled = false; state.failures++;
+      var limit = Number(state.settings.wipeAfter) || 0;
+      /* opt-in only (default 0 = off): a wipe-on-failures rule is a footgun unless
+         the owner has asked for it. */
+      if (limit && state.failures >= limit) {
+        $("unErr").textContent = "Too many failed attempts. The vault on this device has been destroyed.";
+        show("unErr", true);
+        Store.wipe(STORES).then(function () { Vault._main = null; Vault._duress = null; Vault.header = null; });
+        return;
+      }
+      $("unErr").textContent = "That passphrase does not open this vault." + (limit ? " " + (limit - state.failures) + " attempt(s) left before the vault is destroyed." : "");
+      show("unErr", true);
+    });
+  });
   $("toRecovery").onclick = function () { show("unlockRun", false); show("recoverRun", true); };
   $("backToUnlock").onclick = function () { show("recoverRun", false); show("unlockRun", true); };
-  $("doRecover").onclick = function () {
-    Vault.recover($("rc").value).then(function () { show("rcErr", false); enterApp(); })
+  on("doRecover", function () {
+    Vault.recover($("rc").value).then(function () { show("rcErr", false); return enterApp(); })
       .catch(function (e) { $("rcErr").textContent = String(e.message || e); show("rcErr", true); });
-  };
-  $("newPatient").onclick = newPatient;
-  $("edSave").onclick = saveEditor;
-  $("edClose").onclick = function () { state.editing = null; show("editor", false); };
-  $("edDelete").onclick = function () {
-    if (!state.editing) return;
-    if (!confirm("Delete this patient and every note in it? This cannot be undone.")) return;
-    Records.del(state.editing.id).then(function () { state.editing = null; show("editor", false); return refresh(); });
-  };
+  });
+  on("newPatient", newPatient);
+  on("edSave", saveEditor);
+  on("edClose", function () { state.editing = null; show("editor", false); });
+  on("edDelete", deletePatient);
+  on("printRecord", function () { window.print(); });
+  on("q", null);
   $("q").oninput = render;
-  $("lockNow").onclick = lock;
-  $("exportEcl").onclick = function () {
-    Store.all("records").then(function (rows) {
-      var archive = { format: "ecl/archive", version: 1, header: Vault.header, records: rows, exported: new Date().toISOString() };
-      // already encrypted: safe to keep anywhere.
-      Export.save("case-log-" + new Date().toISOString().slice(0, 10) + ".ecl", JSON.stringify(archive, null, 1), "application/json");
-      toast("Exported " + rows.length + " encrypted record(s).");
+  on("lockNow", lock);
+
+  /* ---- filters: tag and date range, applied with the search term ---- */
+  on("tagFilter", null);
+  if ($("tagFilter")) $("tagFilter").onchange = function () { state.tagFilter = this.value; render(); };
+  if ($("fromDate")) $("fromDate").onchange = function () { state.fromFilter = this.value; render(); };
+  if ($("toDate")) $("toDate").onchange = function () { state.toFilter = this.value; render(); };
+  on("clearFilters", function () {
+    state.tagFilter = ""; state.fromFilter = ""; state.toFilter = "";
+    if ($("q")) $("q").value = "";
+    if ($("fromDate")) $("fromDate").value = "";
+    if ($("toDate")) $("toDate").value = "";
+    render();
+  });
+
+  /* ---- export: an encrypted archive, with a checksum so a restore can be checked ---- */
+  function sha256Hex(text) {
+    var buf = CryptoKit.bytes.fromText(text);
+    return crypto.subtle.digest("SHA-256", buf).then(function (d) {
+      return Array.prototype.map.call(new Uint8Array(d), function (b) { return ("0" + b.toString(16)).slice(-2); }).join("");
     });
-  };
-  $("importEcl").onclick = function () {
+  }
+  on("exportEcl", function () {
+    Records.allRows().then(function (all) {
+      var rows = all.filter(function (r) { return !r.deleted; });
+      var archive = { format: "ecl/archive", version: 1, header: Vault.header, records: rows, exported: new Date().toISOString() };
+      var text = JSON.stringify(archive, null, 1);
+      return sha256Hex(text).then(function (sum) {
+        // already encrypted: safe to keep anywhere.
+        Export.save("case-log-" + new Date().toISOString().slice(0, 10) + ".ecl", text, "application/json");
+        state.lastExport = Date.now(); state.notesSinceExport = 0;
+        return saveBackupState().then(function () {
+          if ($("exportSum")) $("exportSum").textContent = "sha256 " + sum.slice(0, 16) + "…";
+          render();
+          toast("Exported " + rows.length + " encrypted record(s) · sha256 " + sum.slice(0, 12) + "…");
+        });
+      });
+    });
+  });
+
+  /* ---- import: MERGE by default, replace only when asked ---- */
+  function openArchive(a, pw) {
+    if (a.header && Vault.header && a.header.salt === Vault.header.salt) return Promise.resolve(Vault.dek);
+    if (!a.header) return Promise.reject(new Error("the archive has no vault header"));
+    return CryptoKit.deriveKey(pw, CryptoKit.bytes.fromBase64(a.header.salt), a.header.iters)
+      .then(function (kek) { return Vault._openWith(a.header, kek); })
+      .then(function (dek) { return Vault._verifyWith(a.header, dek).then(function () { return dek; }); });
+  }
+  function decryptArchive(a, dek) {
+    return Promise.all((a.records || []).map(function (row) {
+      var box = { iv: CryptoKit.bytes.fromBase64(row.iv), ct: CryptoKit.bytes.fromBase64(row.ct) };
+      return CryptoKit.decrypt(dek, box, { aad: CryptoKit.bytes.fromText(row.id) })
+        .then(function (pt) { return { row: row, rec: JSON.parse(CryptoKit.bytes.toText(pt)) }; },
+              function () { return null; });
+    })).then(function (list) { return list.filter(Boolean); });
+  }
+  function handleArchiveFile(f) {
+      if (!f) return;
+      var rd = new FileReader();
+      rd.onload = function () {
+        var a;
+        try { a = JSON.parse(rd.result); } catch (e) { return toast("That file is not JSON."); }
+        if (a.format !== "ecl/archive") return toast("Not an .ecl archive.");
+        var sameVault = !!(a.header && Vault.header && a.header.salt === Vault.header.salt);
+        var pw = sameVault ? "" : (prompt("Passphrase for the imported vault:") || "");
+        if (!sameVault && !pw) return;
+        openArchive(a, pw).then(function (dek) {
+          return decryptArchive(a, dek);
+        }).then(function (incoming) {
+          return Records.allRows().then(function (rows) {
+            var live = {}; rows.filter(function (r) { return !r.deleted; }).forEach(function (r) { live[r.id] = r; });
+            var fresh = [], newer = [], same = [];
+            incoming.forEach(function (x) {
+              var cur = live[x.row.id];
+              if (!cur) fresh.push(x);
+              else if ((x.row.updatedAt || 0) > (cur.updatedAt || 0)) newer.push(x);
+              else same.push(x);
+            });
+            var summary = incoming.length + " record(s): " + fresh.length + " new, " + newer.length
+              + " newer than yours, " + same.length + " already identical or older.";
+            var take = fresh.concat(newer);
+            var go = confirm(summary + "\n\nOK = MERGE them into this vault.\nCancel = offer to replace this vault instead.");
+            if (go) {
+              return Promise.all(take.map(function (x) { return Records.put(x.rec); }))
+                .then(function () { return refresh(); })
+                .then(function () { toast("Merged " + take.length + " record(s)."); });
+            }
+            if (!confirm("REPLACE this vault with the archive? Everything currently here is destroyed.")) return;
+            if (sameVault) return toast("That archive is this vault — nothing to replace.");
+            return Store.wipe([NS.meta, NS.recs]).then(function () {
+              Vault.header = a.header; Vault._main = a.header;
+              return Store.put(NS.meta, a.header, "header");
+            }).then(function () { return openArchive(a, pw); }).then(function (dek) {
+              Vault.dek = dek;
+              return Promise.all((a.records || []).map(function (row) { return Store.put(NS.recs, row); }));
+            }).then(function () { return refresh(); }).then(function () { toast("Replaced with " + incoming.length + " record(s)."); });
+          });
+        }).catch(function (e) { toast("Could not import: " + String(e.message || e)); });
+      };
+      rd.readAsText(f);
+  }
+  on("importEcl", function () {
     var inp = document.createElement("input"); inp.type = "file"; inp.accept = ".ecl,application/json";
+    inp.onchange = function () { handleArchiveFile(inp.files[0]); };
+    inp.click();
+  });
+
+  on("exportCsv", function () {
+    if (!confirm("A CSV is PLAINTEXT. Anyone who opens the file reads every note.\n\nExport it anyway?")) return;
+    var rows = [["patient", "date", "severity", "note", "tags"]];
+    state.patients.forEach(function (p) { (p.symptoms || []).forEach(function (n) {
+      rows.push([p.title || "", new Date(n.date).toISOString().slice(0, 10), String(n.severity || 1), n.note || "", (n.tags || []).join(" ")]);
+    }); });
+    Export.save("case-log-plain-" + new Date().toISOString().slice(0, 10) + ".csv", Loom.csv.toCSV(rows), "text/csv");
+    toast("Plaintext CSV written — handle it as you would a paper record.");
+  });
+
+  /* ---- CSV in: a small parser, a column preview, then case-kit records ---- */
+  function parseCsv(text) {
+    var rows = [], row = [], field = "", q = false, i = 0, c;
+    for (; i < text.length; i++) {
+      c = text[i];
+      if (q) {
+        if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+        else if (c === '"') q = false;
+        else field += c;
+      } else if (c === '"') q = true;
+      else if (c === ",") { row.push(field); field = ""; }
+      else if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
+      else if (c === "\r") { /* skip */ }
+      else field += c;
+    }
+    if (field.length || row.length) { row.push(field); rows.push(row); }
+    return rows.filter(function (r) { return r.some(function (v) { return String(v).trim() !== ""; }); });
+  }
+  on("importCsv", function () {
+    var inp = document.createElement("input"); inp.type = "file"; inp.accept = ".csv,text/csv";
     inp.onchange = function () {
       var f = inp.files[0]; if (!f) return;
       var rd = new FileReader();
       rd.onload = function () {
-        try {
-          var a = JSON.parse(rd.result);
-          if (a.format !== "ecl/archive") throw new Error("not an .ecl archive");
-          if (a.header && Vault.header && a.header.salt !== Vault.header.salt) {
-            if (!confirm("This archive came from a DIFFERENT vault. Importing will replace the current one. Continue?")) return;
-          }
-          return Store.wipe().then(function () {
-            Vault.header = a.header;
-            return Store.put("meta", a.header, "header");
-          }).then(function () {
-            // decrypt FIRST, then hand the plaintext to case-kit's interchange shape
-            return Vault.unlock($("pw").value).catch(function () { return Vault.unlock(prompt("Passphrase for the imported vault:") || ""); });
-          }).then(function () {
-            var rows = a.records || [];
-            return Promise.all(rows.map(function (row) {
-              var box = { iv: CryptoKit.bytes.fromBase64(row.iv), ct: CryptoKit.bytes.fromBase64(row.ct) };
-              return CryptoKit.decrypt(Vault.dek, box, { aad: CryptoKit.bytes.fromText(row.id) })
-                .then(function (pt) { return Store.put("records", row).then(function () { return JSON.parse(CryptoKit.bytes.toText(pt)); }); });
-            }));
-          }).then(function (recs) {
-            // case-kit's interchange round-trip proves the records are still readable
-            var envelope = Case.exportRecord(recs, { label: "imported" });   // (cases, patient, opts)
-            Case.importRecord(envelope);
-            return refresh();
-          }).then(function () { enterApp(); toast("Imported."); });
-        } catch (e) { toast("Could not import: " + String(e.message || e)); }
+        var rows = parseCsv(String(rd.result || ""));
+        if (!rows.length) return toast("That CSV is empty.");
+        var head = rows[0].map(function (h) { return h.trim().toLowerCase(); });
+        var map = { patient: head.indexOf("patient"), date: head.indexOf("date"), note: head.indexOf("note"), tags: head.indexOf("tags"), severity: head.indexOf("severity") };
+        var hasHeader = map.patient !== -1 || map.note !== -1;
+        if (!hasHeader) { map = { patient: 0, date: 1, note: 2, tags: 3, severity: -1 }; }
+        var body = hasHeader ? rows.slice(1) : rows;
+        if (!confirm(body.length + " row(s) found" + (hasHeader ? " under a header" : " (no header — assuming patient, date, note, tags)")
+          + ".\n\nColumns: patient " + map.patient + ", date " + map.date + ", note " + map.note + ", tags " + map.tags + "."
+          + "\n\nImport them as notes?")) return;
+        var byLabel = {};
+        state.patients.forEach(function (p) { byLabel[(p.title || "").toLowerCase()] = p; });
+        var made = 0, notes = 0;
+        var chain = Promise.resolve();
+        body.forEach(function (r) {
+          var label = String(r[map.patient] || "").trim().slice(0, 40) || "(no label)";
+          var text = String(r[map.note] || "").trim();
+          if (!text) return;
+          chain = chain.then(function () {
+            var p = byLabel[label.toLowerCase()];
+            var isNew = false;
+            if (!p) {
+              p = Case.create({ title: label }); p.updated = Date.now();
+              byLabel[label.toLowerCase()] = p; isNew = true; made++;
+            }
+            var d = map.date !== -1 && r[map.date] ? new Date(String(r[map.date]).trim()) : new Date();
+            var when = isNaN(d.getTime()) ? Date.now() : d.getTime();
+            var sev = map.severity !== -1 ? Math.max(1, Math.min(4, Number(r[map.severity]) || 1)) : 1;
+            Case.addSymptom(p, { note: text, severity: sev, date: when,
+              tags: (map.tags !== -1 && r[map.tags] ? String(r[map.tags]).split(/[;|]/) : []).map(function (t) { return t.trim(); }).filter(Boolean) });
+            p.updated = Date.now(); notes++;
+            return Records.put(p).then(function () { if (isNew) return null; return null; });
+          });
+        });
+        chain.then(function () { return refresh(); })
+          .then(function () { toast("Imported " + notes + " note(s) into " + (made + (notes ? 0 : 0)) + " new patient(s)."); })
+          .catch(function (e) { toast("Could not import: " + String(e.message || e)); });
       };
       rd.readAsText(f);
     };
     inp.click();
-  };
-  $("exportCsv").onclick = function () {
-    if (!confirm("A CSV is PLAINTEXT. Anyone who opens the file reads every note.\n\nExport it anyway?")) return;
-    var rows = [["patient", "date", "note", "tags"]];
-    state.patients.forEach(function (p) { (p.symptoms || []).forEach(function (n) { rows.push([p.title || "", new Date(n.date).toISOString().slice(0, 10), n.note || "", (n.tags || []).join(" ")]); }); });
-    Export.save("case-log-plain-" + new Date().toISOString().slice(0, 10) + ".csv", Loom.csv.toCSV(rows), "text/csv");
-    toast("Plaintext CSV written — handle it as you would a paper record.");
-  };
+  });
 
-  /* idle auto-lock */
+  /* ---- settings ---- */
+  function bindSettings() {
+    if ($("setAutoMin")) $("setAutoMin").onchange = function () {
+      state.settings.autoMin = Math.max(1, Math.min(120, Number(this.value) || 5)); saveSettings(); toast("Auto-lock: " + state.settings.autoMin + " min.");
+    };
+    if ($("setLockHide")) $("setLockHide").onchange = function () {
+      state.settings.lockOnHide = !!this.checked; saveSettings(); toast(state.settings.lockOnHide ? "Locks when the tab is hidden." : "Stays unlocked when the tab is hidden.");
+    };
+    if ($("setWipe")) $("setWipe").onchange = function () {
+      var n = Math.max(0, Math.min(20, Number(this.value) || 0));
+      if (n && !confirm("Destroy this vault automatically after " + n + " failed passphrase attempts?\n\nThere is no undo and no server to recover from. This is for a device you expect to be taken.")) { this.value = "0"; return; }
+      state.settings.wipeAfter = n; saveSettings();
+    };
+    if ($("setFont")) $("setFont").onchange = function () {
+      state.settings.fontScale = Number(this.value) || 1; saveSettings(); applySettings();
+    };
+    if ($("setRedact")) $("setRedact").onchange = function () {
+      state.settings.redact = !!this.checked; saveSettings(); applySettings();
+    };
+    if ($("langSel")) $("langSel").onchange = function () {
+      state.settings.lang = this.value; saveSettings(); applySettings();
+    };
+  }
+  bindSettings();
+
+  /* ---- security: change passphrase, rotate the recovery code, duress vault ---- */
+  on("changePass", function () {
+    var a = $("cp1").value, b = $("cp2").value;
+    if (a.length < 8) return toast("Use at least 8 characters.");
+    if (a !== b) return toast("The two do not match.");
+    Vault.changePassphrase(a).then(function () {
+      $("cp1").value = ""; $("cp2").value = "";
+      toast("Passphrase changed — no record was re-encrypted.");
+    }).catch(function (e) { toast(String(e.message || e)); });
+  });
+  on("rotateRecovery", function () {
+    if (!confirm("Show a new 24-word recovery code? The old code stops working immediately.")) return;
+    Vault.setRecovery().then(function (code) {
+      $("rcOut2").textContent = code;
+      show("showRecovery2", true);
+      toast("New recovery code — write it down now.");
+    }).catch(function (e) { toast(String(e.message || e)); });
+  });
+  on("rcDone2", function () { $("rcOut2").textContent = ""; show("showRecovery2", false); });
+  on("setDuress", function () {
+    if (Vault.hasDuress() && !confirm("A decoy vault already exists. Replace it? Its records are destroyed.")) return;
+    var a = $("dp1").value, b = $("dp2").value;
+    if (a.length < 8) return toast("Use at least 8 characters.");
+    if (a !== b) return toast("The two do not match.");
+    Vault.setDuress(a).then(function () {
+      $("dp1").value = ""; $("dp2").value = "";
+      toast("Decoy vault set. That passphrase now opens an empty vault of its own.");
+      renderSecurity();
+    }).catch(function (e) { toast(String(e.message || e)); });
+  });
+  on("dropDuress", function () {
+    if (!confirm("Remove the decoy vault and its records?")) return;
+    Vault.removeDuress().then(function () { toast("Decoy vault removed."); renderSecurity(); });
+  });
+  function renderSecurity() {
+    var box = $("duressState");
+    if (box) box.textContent = Vault.hasDuress()
+      ? "A decoy vault is set: one passphrase opens this vault, another opens an empty one."
+      : "No decoy vault. One passphrase, one vault.";
+    if ($("dropDuress")) show("dropDuress", Vault.hasDuress());
+  }
+
+  /* ---- vault health: does every record still decrypt? ---- */
+  on("runHealth", function () {
+    var out = $("healthOut");
+    if (out) out.textContent = "decrypting every record…";
+    Records.verify().then(function (r) {
+      if (!out) return;
+      out.textContent = r.ok + " of " + r.total + " record(s) decrypt cleanly"
+        + (r.broken.length ? " · " + r.broken.length + " unreadable: " + r.broken.join(", ") : " · nothing broken");
+    }).catch(function (e) { if (out) out.textContent = String(e.message || e); });
+  });
+  on("runTests", function () {
+    if (!window.runSelfTests) return;
+    window.runSelfTests().then(function (out) {
+      var pass = out.filter(function (r) { return r[0] === "pass"; }).length;
+      toast(pass + " / " + out.length + " self-tests passed.");
+      var box = $("healthOut");
+      if (box) box.textContent = out.map(function (r) { return (r[0] === "pass" ? "PASS " : "FAIL ") + r[1]; }).join("\n");
+    });
+  });
+
+  /* ---- storage: how much room is left, and will it survive eviction? ---- */
+  function renderStorage() {
+    var box = $("storageOut");
+    if (!box) return;
+    var bits = [];
+    if (navigator.storage && navigator.storage.estimate) {
+      navigator.storage.estimate().then(function (q) {
+        var used = (q.usage || 0) / 1048576, quota = (q.quota || 0) / 1048576;
+        box.textContent = "using " + used.toFixed(1) + " MB of about " + Math.round(quota) + " MB available"
+          + (q.quota ? " (" + ((used / quota) * 100).toFixed(1) + "%)" : "");
+      }).catch(function () { box.textContent = ""; });
+    }
+    if (navigator.storage && navigator.storage.persisted) {
+      navigator.storage.persisted().then(function (yes) {
+        bits.push(yes ? "storage is persistent" : "storage is NOT persistent — the browser may evict it");
+        box.textContent = (box.textContent ? box.textContent + " · " : "") + bits.join(" · ");
+      }).catch(function () {});
+    }
+  }
+
+  /* ---- idle auto-lock, and locking when the tab is hidden ---- */
   ["mousemove", "keydown", "click", "touchstart"].forEach(function (ev) {
     document.addEventListener(ev, function () { state.idle = 0; }, { passive: true });
   });
   setInterval(function () {
     if (!Vault.dek) return;
     state.idle++;
-    if (state.idle >= state.autoMin * 60 / 5) lock();
+    if (state.idle >= (Number(state.settings.autoMin) || 5) * 60 / 5) lock();
   }, 5000);
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden && state.settings.lockOnHide && Vault.dek) lock();
+  });
 
   /* ------------------------------------------------------------- self-tests */
   function runSelfTests() {
@@ -746,20 +1517,144 @@ ul.plain li:first-child{border-top:0}
               eq(b, a, "the ids survived the round-trip");
             });
         });
+      }); })
+      .then(function () { return t("severity survives encrypt, store and interchange", function () {
+        return Records.all().then(function (rows) {
+          var graded = rows.filter(function (r) { return (r.symptoms || []).some(function (x) { return (x.severity || 1) > 1; }); });
+          if (!graded.length) throw new Error("no note carried a severity above 1");
+        });
+      }); })
+      .then(function () { return t("a deleted record is hidden, and comes back on restore", function () {
+        return Records.all().then(function (before) {
+          var id = before[0].id;
+          return Records.del(id).then(function () { return Records.all(); })
+            .then(function (after) {
+              if (after.length !== before.length - 1) throw new Error("the tombstone is still listed");
+              return Records.restore(id);
+            })
+            .then(function () { return Records.all(); })
+            .then(function (back) { if (back.length !== before.length) throw new Error("restore did not bring it back"); });
+        });
+      }); })
+      .then(function () { return t("editing keeps the previous version, and it can be restored", function () {
+        return Records.all().then(function (rows) {
+          var p = rows[0], before = (p.symptoms || []).length;
+          Case.addSymptom(p, { note: "history probe", severity: 2, date: Date.now(), tags: ["probe"] });
+          p.updated = Date.now();
+          return Records.put(p)
+            .then(function () { return Records.history(p.id); })
+            .then(function (h) {
+              if (!h.length) throw new Error("no earlier version was kept");
+              var prev = h[h.length - 1];
+              if ((prev.symptoms || []).length !== before) throw new Error("the snapshot is not the previous version");
+              return Records.restoreVersion(p.id, prev._at);
+            })
+            .then(function () { return Records.all(); })
+            .then(function (after) {
+              var back = after.filter(function (r) { return r.id === p.id; })[0];
+              if ((back.symptoms || []).length !== before) throw new Error("restore did not go back");
+            });
+        });
+      }); })
+      .then(function () { return t("the version history is ciphertext, not plaintext", function () {
+        return Records.allRows().then(function (rows) {
+          var blob = JSON.stringify(rows);
+          if (blob.indexOf("history probe") !== -1) throw new Error("a note leaked into the stored history");
+        });
+      }); })
+      .then(function () { return t("changing the passphrase re-wraps the key and nothing else", function () {
+        return Vault.changePassphrase("a different passphrase")
+          .then(function () { Vault.dek = null; return Vault.unlock("a different passphrase"); })
+          .then(function () { return Records.all(); })
+          .then(function (rows) { if (!rows.length) throw new Error("no records after the change"); })
+          .then(function () {
+            Vault.dek = null;
+            return Vault.unlock("correct horse battery staple")
+              .then(function () { throw new Error("the old passphrase still opens the vault"); }, function () {});
+          })
+          .then(function () { return Vault.unlock("a different passphrase"); })
+          .then(function () { return Vault.changePassphrase("correct horse battery staple"); });
+      }); })
+      .then(function () { return t("the decoy vault is a separate vault, not a hidden view", function () {
+        var mainDek = Vault.dek;
+        return Vault.setDuress("a decoy passphrase").then(function () {
+          Vault.dek = null;
+          return Vault.unlock("a decoy passphrase").then(function (kind) {
+            if (kind !== "decoy") throw new Error("the decoy passphrase did not open the decoy vault");
+            if (Vault.dek === mainDek) throw new Error("the decoy shares the main data key");
+            return Records.all().then(function (rows) {
+              if (rows.length) throw new Error("the decoy vault should start empty");
+            });
+          }).then(function () {
+            return Vault.removeDuress().then(function () {
+              Vault.dek = null;
+              return Vault.unlock("correct horse battery staple").then(function (kind) {
+                if (kind !== "main") throw new Error("the main vault did not open after the decoy was removed");
+              });
+            });
+          });
+        });
       }); });
 
     return chain.then(function () { return out; });
   }
   window.runSelfTests = runSelfTests;
 
+  /* ---------------------------------------------------------- chrome + keys */
+  function toggleSettings(want) {
+    var v = $("settingsView"); if (!v) return;
+    var open = want === undefined ? v.classList.contains("hidden") : !!want;
+    show("settingsView", open);
+    if (open) { renderSecurity(); renderStorage(); }
+  }
+  function bindChrome() {
+    on("toggleSettings", function () { toggleSettings(); });
+    on("closeSettings", function () { toggleSettings(false); });
+    on("nudgeExport", function () { var b = $("exportEcl"); if (b) b.click(); });
+
+    /* keyboard-first entry: a clinic has one hand on the patient and one on the
+       keyboard, so every frequent action has a key. */
+    document.addEventListener("keydown", function (e) {
+      var t = e.target || {}, tag = (t.tagName || "").toLowerCase();
+      var typing = tag === "input" || tag === "textarea" || tag === "select" || t.isContentEditable;
+      if ((e.ctrlKey || e.metaKey) && (e.key === "s" || e.key === "S")) {
+        var ed = $("editor");
+        if (!ed || ed.classList.contains("hidden")) return;
+        e.preventDefault(); saveEditor(); return;
+      }
+      if (e.key === "Escape") {
+        var sv = $("settingsView");
+        if (sv && !sv.classList.contains("hidden")) return toggleSettings(false);
+        if (state.editing) { state.editing = null; show("editor", false); }
+        return;
+      }
+      if (typing || e.ctrlKey || e.metaKey || e.altKey || !Vault.dek) return;
+      var k = (e.key || "").toLowerCase();
+      if (k === "n") { e.preventDefault(); newPatient(); }
+      else if (k === "/" && e.shiftKey) { e.preventDefault(); toggleSettings(true); }
+      else if (k === "?") { e.preventDefault(); toggleSettings(true); }
+      else if (k === "/") { e.preventDefault(); if ($("q")) $("q").focus(); }
+      else if (k === "l") { e.preventDefault(); lock(); }
+      else if (k === "s") { e.preventDefault(); toggleSettings(); }
+    });
+  }
+
   if (typeof document !== "undefined" && document.getElementById("doCreate")) {
     initTheme();
-    var stamp = $("buildStamp"); if (stamp) stamp.textContent = "build " + BUILD;
-    window.addEventListener("hashchange", function () { if (DEMO) route(); });
+    var stamp = $("buildStamp"); if (stamp) stamp.textContent = "v" + APP_VERSION + " · build " + BUILD;
+    window.addEventListener("hashchange", route);
     /* A cache-first worker hides every release. This one serves the HTML
        network-first, and the registration is asked to update on every load. */
     if (!DEMO && navigator.serviceWorker && location.protocol === "https:") {
       navigator.serviceWorker.register("sw.js").then(function (r) { return r.update(); }).catch(function () {});
+    }
+    bindChrome();
+    /* a double-clicked .ecl (file_handlers in the manifest) lands here, still offline */
+    if (typeof LaunchParams !== "undefined" && "launchQueue" in window) {
+      launchQueue.setConsumer(function (params) {
+        if (!params || !params.files || !params.files.length) return;
+        params.files[0].getFile().then(handleArchiveFile).catch(function () {});
+      });
     }
     boot();
   }

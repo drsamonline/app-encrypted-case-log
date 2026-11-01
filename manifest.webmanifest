@@ -1,10 +1,105 @@
 {
+  "id": "/app-encrypted-case-log/play/",
   "name": "Encrypted Case Log",
   "short_name": "Case Log",
   "description": "Per-patient clinical notes, encrypted on the device. Offline, no account, no server.",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "index.html",
+  "scope": ".",
   "display": "standalone",
-  "background_color": "#0b1220",
-  "theme_color": "#0f766e",
-  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#fcf5f5",
+  "theme_color": "#6d1418",
+  "categories": [
+    "medical",
+    "productivity",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "../assets/app-desktop.png",
+      "sizes": "1280x1500",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "The patient list, a note, and its severity over time"
+    },
+    {
+      "src": "../assets/app-mobile.png",
+      "sizes": "430x1180",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "The patient list on a phone"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New patient",
+      "short_name": "New",
+      "url": "index.html#new",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Search notes",
+      "short_name": "Search",
+      "url": "index.html#search",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "index.html",
+      "accept": {
+        "application/json": [
+          ".ecl"
+        ]
+      }
+    }
+  ],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "prefer_related_applications": false
 }

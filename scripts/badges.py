@@ -28,8 +28,9 @@ BADGES = [
     ("live", "live", "online", BLUE),
     ("crypto", "crypto", "AES-256-GCM", INK),
     ("offline", "offline", "no network", INK),
-    ("tests", "tests", "15 passing", GREEN),
+    ("tests", "tests", "21 passing", GREEN),
     ("deps", "deps", "0 runtime", PLUM),
+    ("langs", "languages", "4 bundled", BLUE),
     ("licence", "licence", "PolyForm NC 1.0.0", BRASS),
 ]
 

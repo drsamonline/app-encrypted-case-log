@@ -34,8 +34,8 @@ if [ "$KIND" = "poster" ]; then
 fi
 
 if [ "$NAME" = "landing" ]; then
-  shot 1280 4600 "$ROOT/docs/assets/landing-desktop.png"
-  shot 430  6200 "$ROOT/docs/assets/landing-mobile.png"
+  shot 1280 5400 "$ROOT/docs/assets/landing-desktop.png"
+  shot 430  7400 "$ROOT/docs/assets/landing-mobile.png"
 else
   shot 1280 1500 "$ROOT/docs/assets/app-desktop.png"
   shot 430  1180 "$ROOT/docs/assets/app-mobile.png"

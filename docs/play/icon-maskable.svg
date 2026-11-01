@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Encrypted Case Log">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="64" y2="64">
+      <stop stop-color="#b8433f"/>
+      <stop offset="1" stop-color="#6d1418"/>
+    </linearGradient>
+  </defs>
+  <!-- full bleed: the launcher applies its own mask, so nothing is rounded here -->
+  <rect width="64" height="64" fill="url(#g)"/>
+  <!-- content inside the 80% safe circle -->
+  <rect x="21" y="16" width="22" height="32" rx="2.4" fill="#fcf5f5"/>
+  <rect x="25" y="21" width="14" height="2.8" rx="1.4" fill="#8e2226"/>
+  <rect x="25" y="27" width="9" height="2.8" rx="1.4" fill="#8e2226"/>
+  <rect x="25" y="33" width="14" height="2.8" rx="1.4" fill="#8e2226"/>
+  <circle cx="32" cy="41" r="3.2" fill="#8e2226"/>
+  <rect x="30.9" y="42.6" width="2.2" height="4" rx="1.1" fill="#8e2226"/>
+</svg>

@@ -192,6 +192,7 @@ footer a{text-decoration:none}
     <a class="wordmark" href="#top"><span class="dot" aria-hidden="true"></span> Encrypted Case Log</a>
     <nav>
       <a class="opt" href="#demo">Live app</a>
+      <a class="opt" href="#new">New in 1.1</a>
       <a class="opt" href="#numbers">The numbers</a>
       <a class="opt" href="https://github.com/drsamonline/app-encrypted-case-log">Source</a>
       <a class="opt" href="https://drsamonline.github.io/">All projects</a>
@@ -220,7 +221,8 @@ footer a{text-decoration:none}
         <a href="https://drsamonline.github.io/app-encrypted-case-log/play/"><img src="assets/badge-live.svg" alt="Live: online"></a>
         <img src="assets/badge-crypto.svg" alt="Crypto: AES-256-GCM">
         <img src="assets/badge-offline.svg" alt="Offline: no network">
-        <img src="assets/badge-tests.svg" alt="Tests: 15 passing">
+        <img src="assets/badge-tests.svg" alt="Tests: 21 passing">
+        <img src="assets/badge-langs.svg" alt="Languages: 4 bundled">
         <img src="assets/badge-deps.svg" alt="Dependencies: 0 runtime">
         <a href="https://github.com/drsamonline/app-encrypted-case-log/blob/main/LICENSE"><img src="assets/badge-licence.svg" alt="Licence: PolyForm Noncommercial 1.0.0"></a>
       </div>
@@ -299,6 +301,65 @@ footer a{text-decoration:none}
   </div>
 </section>
 
+<section class="band" id="new">
+  <div class="wrap">
+    <p class="kicker">New in 1.1</p>
+    <h2 class="display">The parts a working clinic asked for.</h2>
+    <p class="sub">All of it offline and dependency-free: no chart library, no PDF writer, no
+    translation service, no icon CDN.</p>
+    <div class="cards">
+      <div class="card">
+        <p class="num">01</p>
+        <h3>Severity, at last</h3>
+        <p>Notes carry a grade of 1–4 and each patient gets a severity line drawn as hand-rolled
+        SVG — the field the record shape always had, now visible.</p>
+      </div>
+      <div class="card">
+        <p class="num">02</p>
+        <h3>Import merges</h3>
+        <p>Opening a colleague's <code>.ecl</code> no longer wipes your vault. You get a dry-run
+        count — new, newer, identical — and a merge, with replace still available if you ask.</p>
+      </div>
+      <div class="card">
+        <p class="num">03</p>
+        <h3>Passphrase and recovery, rotated</h3>
+        <p>Change the passphrase (the data key is only re-wrapped, never a record re-encrypted) and
+        rotate the 24-word recovery code, which kills the old one.</p>
+      </div>
+      <div class="card">
+        <p class="num">04</p>
+        <h3>Undo, and history</h3>
+        <p>Deleting is a tombstone you can undo until you lock; every save keeps up to five previous
+        versions as ciphertext, restorable in one click.</p>
+      </div>
+      <div class="card">
+        <p class="num">05</p>
+        <h3>Print, and CSV in</h3>
+        <p><code>window.print()</code> with a print stylesheet hands a record over on paper offline;
+        CSV import mirrors the export, with a column preview before anything is written.</p>
+      </div>
+      <div class="card">
+        <p class="num">06</p>
+        <h3>Four languages, one keyboard</h3>
+        <p>English, हिन्दी, ગુજરાતી and मराठी bundled as local dictionaries; <kbd>N</kbd>
+        <kbd>/</kbd> <kbd>Ctrl</kbd>+<kbd>S</kbd> <kbd>L</kbd> for the busy-clinic case.</p>
+      </div>
+      <div class="card">
+        <p class="num">07</p>
+        <h3>A decoy vault</h3>
+        <p>A second passphrase opens a separate, empty vault with its own key. Nothing marks it as a
+        decoy, because a marker would defeat it.</p>
+      </div>
+      <div class="card">
+        <p class="num">08</p>
+        <h3>Settings that stay local</h3>
+        <p>Auto-lock minutes, lock-on-tab-hide, text size, a redaction curtain for shared screens,
+        storage quota, vault health check, and the self-tests on demand.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="band">
   <div class="wrap">
     <p class="kicker">What it refuses to do</p>
@@ -326,8 +387,9 @@ footer a{text-decoration:none}
       <div><b class="mono">600,000</b><span>PBKDF2-HMAC-SHA256 iterations for the key-encryption key</span></div>
       <div><b class="mono">96-bit</b><span>fresh IV on every write; the id is the AAD</span></div>
       <div><b class="mono">24 words</b><span>recovery code, wrapping the same data key, shown once</span></div>
-      <div><b class="mono">15 / 15</b><span>self-tests, no browser needed</span></div>
+      <div><b class="mono">21 / 21</b><span>self-tests, no browser needed</span></div>
       <div><b class="mono">0</b><span>runtime dependencies, 0 build steps</span></div>
+      <div><b class="mono">4</b><span>languages bundled: English, हिन्दी, ગુજરાતી, मराठी</span></div>
     </div>
   </div>
 </section>
@@ -340,7 +402,7 @@ footer a{text-decoration:none}
       <p class="sub" style="margin-bottom:0">The app re-implements none of them. Each is a single file
       that works from <code>file://</code> and from Pages.</p>
       <div class="kits">
-        <code>crypto-kit</code><code>case-kit</code><code>search-kit</code><code>export-kit</code><code>web-kit</code>
+        <code>crypto-kit</code><code>case-kit</code><code>search-kit</code><code>export-kit</code><code>web-kit</code><code>i18n-kit</code>
       </div>
       <p class="sub" style="margin-top:18px">A case is a <code>case-kit</code> case; a note is one of its
       dated symptoms. That is what lets a record made here be read by the family of clinical apps.</p>
@@ -352,7 +414,8 @@ footer a{text-decoration:none}
       no setup wizard. In the browser it is a single page.</p>
       <pre class="shell"><code>git clone https://github.com/drsamonline/app-encrypted-case-log
 cd app-encrypted-case-log
-node tests/self-tests.js        # 15 tests, no browser
+node tests/self-tests.js        # 21 tests, no browser
+python3 scripts/icons.py        # the PWA icon set, locally
 
 open docs/play/index.html       # the app itself
 open docs/play/index.html?demo=1#note   # the demo vault</code></pre>
@@ -370,7 +433,7 @@ open docs/play/index.html?demo=1#note   # the demo vault</code></pre>
         <a href="https://github.com/drsamonline/app-encrypted-case-log">Source</a> ·
         <a href="https://drsamonline.github.io/app-encrypted-case-log/play/">Live app</a></p>
     </div>
-    <p class="stamp" style="margin:0">build 2026-11-01</p>
+    <p class="stamp" style="margin:0">v1.1.0 · build 2026-11-01</p>
   </div>
 </footer>
 
