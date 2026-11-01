@@ -19,3 +19,61 @@ jobs:
           node-version: "20"
       - name: Run the suite
         run: node tests/self-tests.js
+
+  # Attach SHA256SUMS.txt to the rolling release, so a download can be verified offline.
+  #
+  # This lives here, in the workflow that demonstrably runs on every push, rather than in
+  # a workflow of its own: `release: published` never fires again (the pipeline maintains a
+  # rolling app-latest release in place) and a separate `workflow_run`/`push` workflow
+  # produced zero runs on this repository. A trigger that silently does nothing is worse
+  # than no trigger at all.
+  #
+  # The build runs on the same push, so this waits (bounded) until the release assets are
+  # fresher than this run started. If the build fails, the wait times out and this job
+  # fails — which is the signal you want.
+  checksums:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: app-latest
+    steps:
+      - name: Wait for this push's build to refresh the release
+        run: |
+          set -euo pipefail
+          deadline=$(( $(date +%s) + 900 ))
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            newest=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" \
+                       --jq '[.assets[].updated_at] | max' 2>/dev/null || echo "")
+            if [ -n "$newest" ] && [ "$newest" != "null" ]; then
+              age=$(( $(date +%s) - $(date -d "$newest" +%s) ))
+              if [ "$age" -lt 1200 ]; then
+                echo "release assets refreshed ${age}s ago — continuing"
+                exit 0
+              fi
+            fi
+            echo "waiting for the build to publish new assets…"
+            sleep 30
+          done
+          echo "::error::the release was not refreshed within 15 minutes"
+          exit 1
+
+      - name: Download the release assets
+        run: |
+          set -euo pipefail
+          mkdir -p dl
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir dl --clobber
+          rm -f dl/SHA256SUMS.txt
+          ls -l dl
+
+      - name: Write SHA256SUMS.txt
+        run: |
+          set -euo pipefail
+          cd dl
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Upload it to the release
+        run: gh release upload "$TAG" dl/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
