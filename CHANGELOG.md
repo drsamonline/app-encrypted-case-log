@@ -30,7 +30,8 @@ in the footer; this file is the long form.
 
 - Delete is a **tombstone** with an **Undo** in the toast, purged when the vault locks.
 - Every save keeps up to **five previous versions**, stored as the old ciphertexts, with a
-  one-click restore. The self-tests prove the history holds no plaintext.
+  one-click restore and an explicit **Purge history**. The self-tests prove the history holds
+  no plaintext.
 
 ### Working faster
 
@@ -45,9 +46,11 @@ in the footer; this file is the long form.
 ### Language, icons and releases
 
 - **Four languages in the app's own script**: English, हिन्दी, ગુજરાતી, मराठी — no translation
-  service, no network, and no new kit (kits are one-way here).
+  service, no network, and no new kit (kits are one-way here). 57 strings are translated:
+  the lock and recovery screens, the list, the editor, and the settings panel.
 - **The icon is redrawn** in the app's own palette, and the PWA set (192, 512, maskable 512,
-  apple-touch, favicon.ico) is rendered locally by `scripts/icons.py`.
+  apple-touch, favicon.ico) is rendered locally by `scripts/icons.py`. `docs/play/icon.png` is
+  committed so the EXE and APK are built from the real icon, not a monogram fallback.
 - **Manifest finished**: `id`, `lang`, `categories`, `screenshots`, `shortcuts`,
   `display_override`, `file_handlers` for `.ecl`, corrected theme colours.
 - **`SHA256SUMS.txt`** is attached to every release, so a download can be verified offline.

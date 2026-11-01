@@ -84,50 +84,50 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
   </div>
 
   <div class="card warn hidden" id="demoBanner" style="margin:0 0 12px">
-    <b>Demo vault.</b> <span class="mut">Sample records, held in memory only — nothing here is saved, and nothing is written to this device.</span>
+    <b data-i18n="demoTitle">Demo vault.</b> <span class="mut">Sample records, held in memory only — nothing here is saved, and nothing is written to this device.</span>
   </div>
 
   <!-- ============ LOCK ============ -->
   <section id="lockView">
     <div class="card" id="firstRun">
-      <h2 style="margin:0 0 6px;font-size:1rem">Set a passphrase</h2>
-      <p class="mut" style="margin:0 0 4px">Everything is encrypted on this device with AES-256-GCM. There is no server and no account — <b>if you lose the passphrase and the recovery code, the data is unrecoverable.</b></p>
-      <label for="pw1">Passphrase (long is better than clever)</label>
+      <h2 style="margin:0 0 6px;font-size:1rem" data-i18n="setPass">Set a passphrase</h2>
+      <p class="mut" style="margin:0 0 4px" data-i18n="setPassNote">Everything is encrypted on this device with AES-256-GCM. There is no server and no account — <b>if you lose the passphrase and the recovery code, the data is unrecoverable.</b></p>
+      <label for="pw1" data-i18n="passphrase">Passphrase (long is better than clever)</label>
       <input id="pw1" type="password" autocomplete="new-password">
-      <label for="pw2">Repeat it</label>
+      <label for="pw2" data-i18n="repeat">Repeat it</label>
       <input id="pw2" type="password" autocomplete="new-password">
       <p id="pwErr" class="mut hidden" style="color:var(--bad)"></p>
-      <div class="row" style="margin-top:12px"><button id="doCreate">Create the vault</button></div>
+      <div class="row" style="margin-top:12px"><button id="doCreate" data-i18n="createVault">Create the vault</button></div>
     </div>
 
     <div class="card hidden" id="unlockRun">
-      <h2 style="margin:0 0 6px;font-size:1rem">Unlock</h2>
-      <label for="pw">Passphrase</label>
+      <h2 style="margin:0 0 6px;font-size:1rem" data-i18n="unlock">Unlock</h2>
+      <label for="pw" data-i18n="passphrase">Passphrase</label>
       <input id="pw" type="password" autocomplete="current-password">
       <p id="unErr" class="mut hidden" style="color:var(--bad)"></p>
       <div class="row" style="margin-top:12px">
-        <button id="doUnlock">Unlock</button>
-        <button class="ghost" id="toRecovery">Use the recovery code</button>
+        <button id="doUnlock" data-i18n="unlockBtn">Unlock</button>
+        <button class="ghost" id="toRecovery" data-i18n="useRecovery">Use the recovery code</button>
       </div>
     </div>
 
     <div class="card hidden" id="recoverRun">
-      <h2 style="margin:0 0 6px;font-size:1rem">Recovery code</h2>
-      <p class="mut" style="margin:0 0 4px">Type the 24 words you wrote down.</p>
+      <h2 style="margin:0 0 6px;font-size:1rem" data-i18n="recoveryTitle">Recovery code</h2>
+      <p class="mut" style="margin:0 0 4px" data-i18n="recoveryNote">Type the 24 words you wrote down.</p>
       <textarea id="rc" rows="3" placeholder="word word word …"></textarea>
       <p id="rcErr" class="mut hidden" style="color:var(--bad)"></p>
       <div class="row" style="margin-top:12px">
-        <button id="doRecover">Recover</button>
-        <button class="ghost" id="backToUnlock">Back</button>
+        <button id="doRecover" data-i18n="recoverBtn">Recover</button>
+        <button class="ghost" id="backToUnlock" data-i18n="back">Back</button>
       </div>
     </div>
 
     <div class="card hidden" id="showRecovery">
-      <h2 style="margin:0 0 6px;font-size:1rem">Write this down — it is shown once</h2>
+      <h2 style="margin:0 0 6px;font-size:1rem" data-i18n="writeDown">Write this down — it is shown once</h2>
       <p class="mut" style="margin:0 0 8px">These 24 words can unlock the vault if you forget the passphrase. Keep them somewhere else — not on this device.</p>
       <p class="code" id="rcOut"></p>
-      <label class="row" style="margin-top:8px"><input type="checkbox" id="rcAck" style="width:auto"> I have written it down</label>
-      <div class="row" style="margin-top:12px"><button id="rcDone" disabled>Continue</button></div>
+      <label class="row" style="margin-top:8px"><input type="checkbox" id="rcAck" style="width:auto" data-i18n="ack"> I have written it down</label>
+      <div class="row" style="margin-top:12px"><button id="rcDone" disabled data-i18n="cont">Continue</button></div>
     </div>
   </section>
 
@@ -278,16 +278,16 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
         <h2 style="margin:0;font-size:1rem" id="edTitle">Patient</h2>
         <div class="row no-print"><button class="ghost" id="printRecord" type="button" title="Print this record" data-i18n="print">Print</button><button class="ghost" id="edClose" data-i18n="close">Close</button><button class="danger" id="edDelete" data-i18n="del">Delete</button></div>
       </div>
-      <label for="pLabel">Label — initials or a code, <b>not</b> a full name</label>
+      <label for="pLabel" data-i18n="labelField">Label — initials or a code, <b>not</b> a full name</label>
       <input id="pLabel" maxlength="40">
       <p class="mut" style="margin:6px 0 0;font-size:.8rem">The device may be shared, and the label is the field most likely to be seen on a lock screen. A code protects the patient.</p>
       <div class="grid2">
         <div>
-          <label for="nDate">Note date</label>
+          <label for="nDate" data-i18n="noteDate">Note date</label>
           <input id="nDate" type="date">
         </div>
         <div>
-          <label for="nSeverity">Severity (1 mild → 4 marked)</label>
+          <label for="nSeverity" data-i18n="severityField">Severity (1 mild → 4 marked)</label>
           <select id="nSeverity">
             <option value="1">1 — mild</option>
             <option value="2">2 — moderate</option>
@@ -296,16 +296,19 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
           </select>
         </div>
       </div>
-      <label for="nText">Note</label>
+      <label for="nText" data-i18n="noteField">Note</label>
       <textarea id="nText" rows="6"></textarea>
-      <label for="nTags">Tags (comma separated)</label>
+      <label for="nTags" data-i18n="tagsField">Tags (comma separated)</label>
       <input id="nTags">
       <div class="row" style="margin-top:12px"><button id="edSave" data-i18n="save">Save</button><span class="mut" id="edSaved"></span></div>
       <h3 style="font-size:.9rem;margin:16px 0 4px" data-i18n="severityOver">Severity over time</h3>
       <div id="edSpark"></div>
       <h3 style="font-size:.9rem;margin:16px 0 4px" data-i18n="timeline">Timeline</h3>
       <ul class="plain" id="edTimeline"></ul>
-      <h3 style="font-size:.9rem;margin:16px 0 4px" data-i18n="earlier">Earlier versions</h3>
+      <div class="spread" style="margin:16px 0 4px">
+        <h3 style="font-size:.9rem;margin:0" data-i18n="earlier">Earlier versions</h3>
+        <button class="ghost no-print" id="purgeHistory" type="button" data-i18n="purgeHistory">Purge history</button>
+      </div>
       <ul class="plain" id="edHistory"></ul>
       <p class="mut" style="font-size:.78rem;margin:8px 0 0">Every save keeps the previous ciphertext, up to five versions. Restoring one is itself a save, so nothing is lost.</p>
     </div>
@@ -677,6 +680,14 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
         return Records.put(pick).then(function () { return pick; });
       });
     },
+    /* drop the kept versions for one record; the record itself is untouched */
+    purgeHistory: function (id) {
+      return Store.get(NS.recs, id).then(function (row) {
+        if (!row) return null;
+        row.history = [];
+        return Store.put(NS.recs, row);
+      });
+    },
     /* every record, decrypted once, to answer "is this vault intact?" */
     verify: function () {
       return Store.all(NS.recs).then(function (rows) {
@@ -711,7 +722,16 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
       changePass: "Change passphrase", newRecovery: "New recovery code",
       verifyAll: "Verify every record", runTests: "Run the self-tests",
       backup: "Export .ecl now", records: "record(s)", notes: "note(s)",
-      open: "Open", allTags: "All tags", sev: "sev"
+      open: "Open", allTags: "All tags", sev: "sev", purgeHistory: "Purge history",
+      setPass: "Set a passphrase", passphrase: "Passphrase", createVault: "Create the vault",
+      setPassNote: "Everything is encrypted on this device with AES-256-GCM. There is no server and no account — if you lose the passphrase and the recovery code, the data is unrecoverable.",
+      unlock: "Unlock", unlockBtn: "Unlock", useRecovery: "Use the recovery code",
+      recoveryTitle: "Recovery code", recoveryNote: "Type the 24 words you wrote down.",
+      recoverBtn: "Recover", back: "Back", writeDown: "Write this down — it is shown once",
+      ack: "I have written it down", cont: "Continue",
+      labelField: "Label — initials or a code, not a full name", noteDate: "Note date",
+      severityField: "Severity (1 mild → 4 marked)", noteField: "Note",
+      tagsField: "Tags (comma separated)", demoTitle: "Demo vault."
     },
     hi: {
       patients: "रोगी", timeline: "समयरेखा", earlier: "पुराने संस्करण",
@@ -730,7 +750,16 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
       changePass: "पासफ़्रेज़ बदलें", newRecovery: "नया रिकवरी कोड",
       verifyAll: "हर रिकॉर्ड जाँचें", runTests: "स्वयं-परीक्षण चलाएँ",
       backup: "अभी .ecl निर्यात करें", records: "रिकॉर्ड", notes: "टिप्पणियाँ",
-      open: "खोलें", allTags: "सभी टैग", sev: "गंभीरता"
+      open: "खोलें", allTags: "सभी टैग", sev: "गंभीरता", purgeHistory: "इतिहास मिटाएँ",
+      setPass: "पासफ़्रेज़ सेट करें", passphrase: "पासफ़्रेज़", createVault: "वॉल्ट बनाएँ",
+      setPassNote: "सब कुछ इसी डिवाइस पर AES-256-GCM से एन्क्रिप्ट रहता है। कोई सर्वर नहीं, कोई खाता नहीं — पासफ़्रेज़ और रिकवरी कोड खो दिया तो डेटा वापस नहीं आएगा।",
+      unlock: "अनलॉक", unlockBtn: "अनलॉक करें", useRecovery: "रिकवरी कोड इस्तेमाल करें",
+      recoveryTitle: "रिकवरी कोड", recoveryNote: "आपने लिखे 24 शब्द यहाँ डालें।",
+      recoverBtn: "रिकवर करें", back: "वापस", writeDown: "इसे लिख लें — यह एक बार ही दिखेगा",
+      ack: "मैंने लिख लिया", cont: "आगे बढ़ें",
+      labelField: "लेबल — आद्याक्षर या कोड, पूरा नाम नहीं", noteDate: "टिप्पणी की तारीख",
+      severityField: "गंभीरता (1 हल्की → 4 अधिक)", noteField: "टिप्पणी",
+      tagsField: "टैग (कॉमा से अलग)", demoTitle: "डेमो वॉल्ट।"
     },
     gu: {
       patients: "દર્દીઓ", timeline: "સમયરેખા", earlier: "જૂની આવૃત્તિઓ",
@@ -749,7 +778,16 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
       changePass: "પાસફ્રેઝ બદલો", newRecovery: "નવો રિકવરી કોડ",
       verifyAll: "દરેક રેકોર્ડ ચકાસો", runTests: "સ્વયં-પરીક્ષણ ચલાવો",
       backup: "હવે .ecl નિકાસ કરો", records: "રેકોર્ડ", notes: "નોંધ",
-      open: "ખોલો", allTags: "બધા ટૅગ", sev: "તીવ્રતા"
+      open: "ખોલો", allTags: "બધા ટૅગ", sev: "તીવ્રતા", purgeHistory: "ઇતિહાસ દૂર કરો",
+      setPass: "પાસફ્રેઝ સેટ કરો", passphrase: "પાસફ્રેઝ", createVault: "વૉલ્ટ બનાવો",
+      setPassNote: "બધું આ જ ડિવાઇસ પર AES-256-GCM થી એન્ક્રિપ્ટ રહે છે. કોઈ સર્વર નહીં, કોઈ ખાતું નહીં — પાસફ્રેઝ અને રિકવરી કોડ ખોવાય તો ડેટા પાછો નહીં આવે.",
+      unlock: "અનલૉક", unlockBtn: "અનલૉક કરો", useRecovery: "રિકવરી કોડ વાપરો",
+      recoveryTitle: "રિકવરી કોડ", recoveryNote: "તમે લખેલા 24 શબ્દો અહીં લખો.",
+      recoverBtn: "રિકવર કરો", back: "પાછળ", writeDown: "આ લખી લો — એક જ વાર દેખાશે",
+      ack: "મેં લખી લીધું", cont: "આગળ વધો",
+      labelField: "લેબલ — આદ્યાક્ષર કે કોડ, પૂરું નામ નહીં", noteDate: "નોંધની તારીખ",
+      severityField: "તીવ્રતા (1 હળવી → 4 વધુ)", noteField: "નોંધ",
+      tagsField: "ટૅગ (કોમાથી અલગ)", demoTitle: "ડેમો વૉલ્ટ."
     },
     mr: {
       patients: "रुग्ण", timeline: "कालरेषा", earlier: "जुनी आवृत्ती",
@@ -768,7 +806,16 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
       changePass: "पासफ्रेज बदला", newRecovery: "नवीन रिकव्हरी कोड",
       verifyAll: "प्रत्येक रेकॉर्ड तपासा", runTests: "स्वयं-चाचण्या चालवा",
       backup: "आता .ecl निर्यात करा", records: "रेकॉर्ड", notes: "नोंदी",
-      open: "उघडा", allTags: "सर्व टॅग", sev: "तीव्रता"
+      open: "उघडा", allTags: "सर्व टॅग", sev: "तीव्रता", purgeHistory: "इतिहास काढा",
+      setPass: "पासफ्रेज सेट करा", passphrase: "पासफ्रेज", createVault: "व्हॉल्ट तयार करा",
+      setPassNote: "सर्व काही याच डिव्हाइसवर AES-256-GCM ने एन्क्रिप्ट राहते. सर्व्हर नाही, खाते नाही — पासफ्रेज आणि रिकव्हरी कोड हरवला तर डेटा परत मिळणार नाही.",
+      unlock: "अनलॉक", unlockBtn: "अनलॉक करा", useRecovery: "रिकव्हरी कोड वापरा",
+      recoveryTitle: "रिकव्हरी कोड", recoveryNote: "तुम्ही लिहिलेले २४ शब्द इथे टाका.",
+      recoverBtn: "रिकव्हर करा", back: "मागे", writeDown: "हे लिहून घ्या — एकदाच दिसेल",
+      ack: "मी लिहून घेतले", cont: "पुढे",
+      labelField: "लेबल — आद्याक्षरे किंवा कोड, पूर्ण नाव नाही", noteDate: "नोंदीची तारीख",
+      severityField: "तीव्रता (१ सौम्य → ४ जास्त)", noteField: "नोंद",
+      tagsField: "टॅग (स्वल्पविरामाने वेगळे)", demoTitle: "डेमो व्हॉल्ट."
     }
   };
 
@@ -1198,6 +1245,11 @@ kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.78
   on("edSave", saveEditor);
   on("edClose", function () { state.editing = null; show("editor", false); });
   on("edDelete", deletePatient);
+  on("purgeHistory", function () {
+    var p = state.editing; if (!p) return;
+    if (!confirm("Delete every kept version of this record? The current one stays.")) return;
+    Records.purgeHistory(p.id).then(function () { openPatient(p.id); toast("History purged."); });
+  });
   on("printRecord", function () { window.print(); });
   on("q", null);
   $("q").oninput = render;

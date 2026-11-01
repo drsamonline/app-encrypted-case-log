@@ -71,8 +71,12 @@ def main():
     big.save(ico, sizes=[(16, 16), (32, 32), (48, 48), (64, 64)])
     print("wrote", os.path.relpath(ico, ROOT))
 
-    # the social card / release icon: the same 512, at the repo's docs root
-    for dest in (os.path.join(ROOT, "docs", "icon.png"),):
+    # The social card, and the icon the RELEASE build picks up.
+    # app-builder's tools/make_icons.py looks for docs/play/icon.png first and only
+    # falls back to icon.svg when cairosvg happens to be installed — otherwise it draws
+    # a monogram. Shipping the PNG makes the EXE and APK icon deterministic.
+    for dest in (os.path.join(ROOT, "docs", "icon.png"),
+                 os.path.join(PLAY, "icon.png")):
         shutil.copyfile(os.path.join(OUT, "icon-512.png"), dest)
         print("wrote", os.path.relpath(dest, ROOT))
 
