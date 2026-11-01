@@ -1,0 +1,8 @@
+# The landing-page screenshots are working artefacts: scripts/shot.sh writes them so a
+# human can look at the page before committing, but only the app shots and the badges
+# are shipped in docs/assets.
+docs/assets/landing-*.png
+
+# Editor and OS noise
+.DS_Store
+*.swp
