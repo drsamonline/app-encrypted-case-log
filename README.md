@@ -1,25 +1,11 @@
 # Encrypted Case Log
 
-<!-- shot:start -->
-
-![Screenshot](docs/shot.png)
-
-<!-- shot:end -->
-
-
-<!-- badges:start -->
-[![Landing page](https://img.shields.io/badge/Landing_page-open-14b8a6?logo=githubpages&logoColor=white)](https://drsamonline.github.io/app-encrypted-case-log/)
-[![All projects](https://img.shields.io/badge/All%20projects-hub-14b8a6?logo=githubpages&logoColor=white)](https://drsamonline.github.io/)
-[![Live demo](https://img.shields.io/badge/Live_demo-open-a3e635?logo=html5&logoColor=white)](https://drsamonline.github.io/app-encrypted-case-log/play/)
-[![Source](https://img.shields.io/badge/Source-GitHub-0b1220?logo=github&logoColor=white)](https://github.com/drsamonline/app-encrypted-case-log)
-
-[![License](https://img.shields.io/badge/License-PolyForm_Noncommercial_1.0.0-blue)](LICENSE)
-[![Dependencies](https://img.shields.io/badge/Dependencies-none-success)](https://github.com/drsamonline/app-encrypted-case-log)
-[![Offline ready](https://img.shields.io/badge/Offline-ready-success)](https://github.com/drsamonline/app-encrypted-case-log)
-[![Downloads](https://img.shields.io/github/downloads/drsamonline/app-encrypted-case-log/total)](https://github.com/drsamonline/app-encrypted-case-log/releases)
-[![Last commit](https://img.shields.io/github/last-commit/drsamonline/app-encrypted-case-log)](https://github.com/drsamonline/app-encrypted-case-log/commits/main)
-<!-- badges:end -->
-
+[![Live](docs/assets/badge-live.svg)](https://drsamonline.github.io/app-encrypted-case-log/play/)
+![Crypto](docs/assets/badge-crypto.svg)
+![Offline](docs/assets/badge-offline.svg)
+![Tests](docs/assets/badge-tests.svg)
+![Dependencies](docs/assets/badge-deps.svg)
+[![Licence](docs/assets/badge-licence.svg)](LICENSE)
 
 **Per-patient clinical notes, encrypted on the device. Offline. No account, no server.**
 
@@ -27,17 +13,41 @@ Everything lives on the device, encrypted at rest with **AES-256-GCM** (Web Cryp
 **IndexedDB**. The page carries `connect-src 'none'`, so an outbound request is impossible
 even by accident — there is nothing to send your notes to.
 
+| | |
+|---|---|
+| **Landing page** | https://drsamonline.github.io/app-encrypted-case-log/ |
+| **Live app** | https://drsamonline.github.io/app-encrypted-case-log/play/ |
+| **Demo vault** (sample records, memory only) | https://drsamonline.github.io/app-encrypted-case-log/play/index.html?demo=1 |
+| **Source** | https://github.com/drsamonline/app-encrypted-case-log |
+| **All projects** | https://drsamonline.github.io/ |
+
+<!-- shot:start -->
+
+![Screenshot](docs/shot.png)
+
+<!-- shot:end -->
+
+The landing page embeds the real app in a frame, driven by guided buttons
+(`#patients`, `#note`, `#search`, `#locked`) rather than four static pictures. Screens of
+the app itself, at both widths, live in `docs/assets/app-desktop.png` and
+`docs/assets/app-mobile.png`; both are produced by `scripts/shot.sh app`, and the badges
+are drawn locally by `scripts/badges.py` — an offline-first app should not fetch an image
+service to describe itself.
+
 Built with Forge, composing five shared kits: `crypto-kit` (AES-GCM, PBKDF2, key wrap),
 `case-kit` (the record shape), `search-kit` (ranked search), `export-kit` (save a file) and
 `web-kit` (shell, storage runtime, PWA).
 
 ## Run it
 
-Open `index.html` — that is the whole app. No build step, no install.
+`docs/play/index.html` is the whole app. No build step, no install.
 
 ```
 node tests/self-tests.js      # 15 tests, no browser needed
 ```
+
+Append `?demo=1` to open the sample vault — real crypto over real records, but held in
+memory, so nothing is written to your device.
 
 ## The vault, and what it means for you
 
@@ -87,6 +97,23 @@ The round-trip is tested: **export → wipe → import → identical data.**
 Never persists the DEK; it is held in memory only and cleared on lock. **Auto-locks after 5
 minutes idle** and on demand. Requests `navigator.storage.persist()` so the database is not
 evicted.
+
+The service worker serves the **HTML network-first** (the cache is only the offline
+fallback) and asks the registration to update on every load, so a shipped release is not
+hidden behind a stale cache. The footer prints a **build stamp**, so "am I on the new one?"
+is answerable from the page itself.
+
+## Layout
+
+```
+docs/index.html          the landing page — its own design, not the app's
+docs/play/               the app: index.html plus the five kits, sw.js, manifest, icon
+docs/assets/             app screenshots and the generated badges
+docs/shot.png            the pipeline's own screenshot (do not hand-edit)
+scripts/badges.py        draws the badges into docs/assets/badge-*.svg
+scripts/shot.sh          headless Chromium screenshots, desktop and phone widths
+index.html, *.js         a mirror of docs/play/ kept at the repo root
+```
 
 ## Licence
 

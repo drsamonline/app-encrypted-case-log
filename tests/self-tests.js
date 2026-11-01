@@ -15,7 +15,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const file = process.argv[2] || path.join(root, 'index.html');
+const file = process.argv[2] || path.join(root, 'docs', 'play', 'index.html');
 const html = fs.readFileSync(file, 'utf8');
 
 if (!globalThis.crypto || !globalThis.crypto.subtle) {
@@ -34,7 +34,16 @@ function stubEl() {
   return el;
 }
 const els = {};
+/* the app's theme toggle touches <html>'s style and data-theme; that is all the
+ * documentElement it needs, so that is all the stub provides. */
+const htmlEl = {
+  style: { setProperty() {}, removeProperty() {} },
+  getAttribute: () => null,
+  setAttribute() {},
+  removeAttribute() {}
+};
 globalThis.document = {
+  documentElement: htmlEl,
   getElementById: (id) => (els[id] = els[id] || stubEl()),
   querySelectorAll: () => [],
   createElement: () => stubEl(),

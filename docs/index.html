@@ -3,87 +3,411 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Encrypted Case Log — Per-patient clinical notes, encrypted on the device with AES-256-GCM. Offline, no account, no server.</title>
-<meta name="description" content="Per-patient clinical notes, encrypted on the device with AES-256-GCM. Offline, no account, no server.">
-<meta name="theme-color" content="#0f766e">
-<meta property="og:title" content="Encrypted Case Log — Per-patient clinical notes, encrypted on the device with AES-256-GCM. Offline, no account, no server.">
+<title>Encrypted Case Log — per-patient clinical notes, sealed on the device</title>
+<meta name="description" content="Per-patient clinical notes, encrypted on the device with AES-256-GCM. Offline, no account, no server. Open the live app or the portable Windows and Android builds.">
+<meta property="og:title" content="Encrypted Case Log — notes that never leave the room">
 <meta property="og:description" content="Per-patient clinical notes, encrypted on the device with AES-256-GCM. Offline, no account, no server.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://drsamonline.github.io/app-encrypted-case-log/">
+<meta property="og:image" content="https://drsamonline.github.io/app-encrypted-case-log/assets/app-desktop.png">
 <link rel="canonical" href="https://drsamonline.github.io/app-encrypted-case-log/">
 <link rel="icon" href="play/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#f6f1e6">
+<script>
+/* Light is the base palette; the system preference decides the first paint; the
+   button in the header overrides it. This page keeps its OWN key, so changing the
+   theme here never silently changes the app's theme (which lives under loom:theme). */
+(function () {
+  var KEY = "ecl:landing-theme";
+  function pref() {
+    try { var v = localStorage.getItem(KEY); if (v === "light" || v === "dark") return v; } catch (e) {}
+    return (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
+  }
+  function apply(m) {
+    document.documentElement.setAttribute("data-theme", m);
+    var t = document.querySelector('meta[name="theme-color"]');
+    if (t) t.setAttribute("content", m === "dark" ? "#100e0b" : "#f6f1e6");
+    var b = document.getElementById("themeBtn");
+    if (b) b.textContent = m === "dark" ? "☀" : "☾";
+  }
+  apply(pref());
+  document.addEventListener("DOMContentLoaded", function () {
+    var b = document.getElementById("themeBtn");
+    if (!b) return;
+    apply(pref());
+    b.onclick = function () {
+      var m = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      try { localStorage.setItem(KEY, m); } catch (e) {}
+      apply(m);
+    };
+  });
+})();
+</script>
 <style>
-:root{--bg:#0b1220;--card:#141d2e;--ink:#e8eef7;--mut:#93a3ba;--line:rgba(255,255,255,.10);--acc:#14b8a6;--r:14px}
+:root{
+  --paper:#f6f1e6; --paper2:#efe7d5; --card:#fffdf7; --ink:#191510; --mut:#6d6353;
+  --line:#ded3bc; --blue:#1d3a5f; --brass:#a8802f; --seal:#8a6b22; --rule:rgba(25,21,16,.10);
+  --shadow:0 1px 2px rgba(25,21,16,.06),0 10px 30px rgba(25,21,16,.07);
+}
+html[data-theme="dark"]{
+  --paper:#100e0b; --paper2:#171410; --card:#1a1611; --ink:#f3ecdd; --mut:#a99c85;
+  --line:#2e281f; --blue:#9dbcdd; --brass:#d8ac5c; --seal:#d8ac5c; --rule:rgba(243,236,221,.10);
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 34px rgba(0,0,0,.35);
+}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-.wrap{max-width:900px;margin:0 auto;padding:24px}
-header.hero{padding:56px 0 28px;text-align:center}
-h1{font-size:clamp(1.7rem,4vw,2.6rem);margin:0 0 10px;line-height:1.15}
-.tag{color:var(--acc);font-weight:700;letter-spacing:.04em;text-transform:uppercase;font-size:.8rem}
-.lead{color:var(--mut);font-size:1.06rem;max-width:620px;margin:0 auto}
-.cta{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:26px 0 6px}
-.btn{display:inline-block;border:1px solid var(--line);border-radius:10px;padding:11px 18px;color:var(--ink);text-decoration:none;font-weight:600}
-.btn.primary{background:var(--acc);color:#04211d;border-color:transparent}
-.btn:hover{border-color:var(--acc)}
-section{padding:30px 0;border-top:1px solid var(--line)}
-h2{font-size:1.2rem;margin:0 0 14px}
-ul.features{list-style:none;padding:0;margin:0;display:grid;gap:10px}
-ul.features li{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
-ul.features li b{display:block}
-ul.features li span{color:var(--mut);font-size:.95rem}
-figure{margin:0}
-figure img{width:100%;border:1px solid var(--line);border-radius:var(--r);display:block}
-.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px}
-.card h3{margin:0 0 6px;font-size:1rem}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font:16px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.display,.serif{font-family:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+a{color:var(--blue)}
+a:hover{color:var(--brass)}
+
+/* ---------- header ---------- */
+header.bar{position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.bar .wrap{display:flex;align-items:center;gap:18px;height:62px}
+.wordmark{display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:.01em;text-decoration:none;color:var(--ink)}
+.wordmark .dot{width:9px;height:9px;border-radius:50%;background:var(--brass);box-shadow:0 0 0 3px color-mix(in srgb,var(--brass) 22%,transparent)}
+.bar nav{margin-left:auto;display:flex;align-items:center;gap:18px;font-size:.9rem}
+.bar nav a{text-decoration:none;color:var(--mut)}
+.bar nav a:hover{color:var(--ink)}
+#themeBtn{border:1px solid var(--line);background:transparent;color:var(--ink);width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:1rem;line-height:1}
+
+/* ---------- hero ---------- */
+.hero{padding:64px 0 56px;border-bottom:1px solid var(--line);
+  background:
+    repeating-linear-gradient(to bottom,transparent 0 31px,var(--rule) 31px 32px),
+    radial-gradient(900px 320px at 88% -10%,color-mix(in srgb,var(--brass) 12%,transparent),transparent 70%);
+  background-position:0 0,0 0;}
+.hero .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:48px;align-items:center}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);font-weight:700}
+.hero h1{font-size:clamp(2.1rem,4.6vw,3.5rem);line-height:1.04;margin:14px 0 16px;letter-spacing:-.02em}
+.hero h1 em{font-style:italic;color:var(--blue)}
+.lead{font-size:1.12rem;color:var(--mut);max-width:33em;margin:0 0 26px}
+.cta{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:26px}
+.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:11px 18px;
+  text-decoration:none;color:var(--ink);font-weight:600;font-size:.94rem;background:var(--card);box-shadow:var(--shadow)}
+.btn:hover{border-color:var(--brass);color:var(--ink)}
+.btn.primary{background:var(--blue);color:var(--paper);border-color:transparent}
+html[data-theme="dark"] .btn.primary{color:#0c0a08}
+.btn.primary:hover{color:var(--paper)}
+.badges{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.badges img{display:block;height:22px;width:auto}
+
+/* ---------- the record card ---------- */
+.record{background:var(--card);border:1px solid var(--line);border-radius:4px;box-shadow:var(--shadow);padding:20px 20px 16px;position:relative;transform:rotate(-.6deg)}
+.record:before{content:"";position:absolute;inset:6px;border:1px solid var(--rule);border-radius:2px;pointer-events:none}
+.record .head{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:12px}
+.record .head b{font-family:"Iowan Old Style",Georgia,serif;font-size:1rem;letter-spacing:.02em}
+.record .head span{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+.rec-line{height:9px;border-radius:2px;background:var(--rule);margin:11px 0}
+.rec-line.w80{width:80%} .rec-line.w65{width:65%} .rec-line.w90{width:90%} .rec-line.w45{width:45%}
+.rec-redact{height:11px;border-radius:1px;background:var(--ink);opacity:.82;margin:11px 0;width:58%}
+.rec-redact.alt{width:34%} .rec-redact.wide{width:72%}
+.seal{position:absolute;right:-12px;bottom:-12px;width:92px;height:92px;border-radius:50%;
+  border:1.5px solid var(--brass);color:var(--brass);display:grid;place-items:center;text-align:center;
+  font-size:.6rem;letter-spacing:.13em;text-transform:uppercase;line-height:1.4;background:var(--card);
+  box-shadow:0 0 0 5px color-mix(in srgb,var(--brass) 10%,transparent);transform:rotate(6deg)}
+.seal b{display:block;font-size:.66rem;letter-spacing:.06em}
+.record figcaption{font-size:.74rem;color:var(--mut);margin-top:10px;padding:10px 84px 0 0;border-top:1px dashed var(--line)}
+
+/* ---------- sections ---------- */
+section.band{padding:64px 0;border-bottom:1px solid var(--line)}
+h2{font-size:clamp(1.4rem,2.6vw,1.95rem);line-height:1.15;margin:0 0 10px;letter-spacing:-.01em}
+.sub{color:var(--mut);max-width:44em;margin:0 0 30px}
+.kicker{font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);font-weight:700;margin:0 0 8px}
+
+.cards{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:20px}
+.card h3{margin:0 0 6px;font-size:1.02rem}
 .card p{margin:0;color:var(--mut);font-size:.93rem}
-code{background:rgba(255,255,255,.06);border-radius:5px;padding:1px 5px;font-size:.9em}
-footer{padding:28px 0 60px;color:var(--mut);font-size:.9rem;border-top:1px solid var(--line)}
-a{color:var(--acc)}
+.card .num{font-family:ui-monospace,Menlo,monospace;font-size:.72rem;color:var(--brass);letter-spacing:.1em}
+
+/* ---------- demo band ---------- */
+.demo{background:#12212e;color:#e9eef4;border-bottom:1px solid var(--line);padding:64px 0}
+.demo h2,.demo .kicker{color:#fff}
+.demo .kicker{color:#d8ac5c}
+.demo .sub{color:#a9b8c6}
+.guide{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 20px}
+.guide button{font:inherit;font-size:.86rem;font-weight:600;cursor:pointer;border-radius:999px;padding:8px 15px;
+  background:transparent;border:1px solid #3a4c5c;color:#cfdae4}
+.guide button:hover{border-color:#d8ac5c;color:#fff}
+.guide button[aria-pressed="true"]{background:#d8ac5c;border-color:#d8ac5c;color:#1a1206}
+.frame-wrap{position:relative;border-radius:8px;overflow:hidden;border:1px solid #2b3b49;background:#0d1821;box-shadow:0 24px 60px rgba(0,0,0,.45)}
+.chrome{display:flex;align-items:center;gap:6px;padding:9px 12px;background:#182a38;border-bottom:1px solid #2b3b49}
+.chrome i{width:9px;height:9px;border-radius:50%;background:#3f5568;display:block}
+.chrome .url{margin-left:8px;font-size:.74rem;color:#8fa3b5;font-family:ui-monospace,Menlo,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.frame-wrap .poster{display:block;width:100%;height:auto}
+.frame-wrap iframe{position:absolute;left:0;right:0;top:42px;bottom:0;width:100%;height:calc(100% - 42px);border:0;background:#fcf5f5;opacity:0}
+/* revealed in one step, not faded: a half-finished transition must never be what a visitor sees */
+.frame-wrap.live iframe{opacity:1}
+.frame-wrap.live .poster{visibility:hidden}
+.frame-wrap .poster-box{position:relative}
+.frame-note{font-size:.8rem;color:#8fa3b5;margin:12px 0 0}
+
+/* ---------- refusals ---------- */
+.refuse{display:grid;gap:0;border-top:1px solid var(--line);margin-top:26px}
+.refuse div{display:grid;grid-template-columns:190px 1fr;gap:18px;padding:16px 0;border-bottom:1px solid var(--line)}
+.refuse dt{font-weight:700;font-size:.95rem}
+.refuse dd{margin:0;color:var(--mut);font-size:.94rem}
+
+/* ---------- numbers ---------- */
+.nums{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.nums div{background:var(--card);padding:20px}
+.nums b{display:block;font-family:"Iowan Old Style",Georgia,serif;font-size:1.22rem;line-height:1.1;margin-bottom:4px}
+.nums span{font-size:.82rem;color:var(--mut)}
+
+/* ---------- kits + run ---------- */
+.kits{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 0}
+.kits code{border:1px solid var(--line);background:var(--paper2);border-radius:999px;padding:5px 12px;font-size:.82rem;color:var(--ink)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:34px}
+pre.shell{background:var(--paper2);border:1px solid var(--line);border-radius:6px;padding:14px 16px;overflow:auto;font-size:.86rem;margin:10px 0 0}
+pre.shell code{background:none;padding:0;border:0}
+
+/* ---------- footer ---------- */
+footer{padding:44px 0 60px;color:var(--mut);font-size:.9rem}
+footer .wrap{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;align-items:flex-start}
+footer a{text-decoration:none}
+.stamp{font-family:ui-monospace,Menlo,monospace;font-size:.76rem;color:var(--mut)}
+
+@media (max-width:820px){
+  .hero .grid{grid-template-columns:1fr;gap:34px}
+  .record{transform:none;max-width:420px}
+  .two{grid-template-columns:1fr;gap:24px}
+  .refuse div{grid-template-columns:1fr;gap:4px}
+  .bar nav a.opt{display:none}
+  section.band,.demo,.hero{padding:44px 0}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}html{scroll-behavior:auto}}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="hero">
-    <p class="tag">Offline · single file · no tracking</p>
-    <h1>Encrypted Case Log</h1>
-    <p class="lead">Per-patient clinical notes, encrypted on the device with AES-256-GCM. Offline, no account, no server.</p>
-    <div class="cta">
-      <a class="btn primary" href="https://github.com/drsamonline/app-encrypted-case-log/releases/latest/download/app-encrypted-case-log-portable.exe">Download for Windows (.exe)</a>
-      <a class="btn" href="https://github.com/drsamonline/app-encrypted-case-log/releases/latest/download/app-encrypted-case-log.apk">Download for Android (.apk)</a>
-      <a class="btn primary" href="https://drsamonline.github.io/app-encrypted-case-log/play/">Open the live demo →</a>
-      <a class="btn" href="https://github.com/drsamonline/app-encrypted-case-log">Source on GitHub</a>
+
+<header class="bar">
+  <div class="wrap">
+    <a class="wordmark" href="#top"><span class="dot" aria-hidden="true"></span> Encrypted Case Log</a>
+    <nav>
+      <a class="opt" href="#demo">Live app</a>
+      <a class="opt" href="#numbers">The numbers</a>
+      <a class="opt" href="https://github.com/drsamonline/app-encrypted-case-log">Source</a>
+      <a class="opt" href="https://drsamonline.github.io/">All projects</a>
+      <button id="themeBtn" type="button" aria-label="Switch between light and dark">☾</button>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+<div class="hero">
+  <div class="wrap grid">
+    <div>
+      <p class="eyebrow">Clinical notes · sealed on the device</p>
+      <h1 class="display">Notes that never <em>leave the room</em>.</h1>
+      <p class="lead">Per-patient notes, encrypted at rest with AES-256-GCM in the browser's own storage.
+      No account, no server, no sync — and a page whose Content-Security-Policy makes an outbound request
+      impossible even by accident.</p>
+      <div class="cta">
+        <a class="btn primary" href="#demo">Open the live app →</a>
+        <a class="btn" href="https://github.com/drsamonline/app-encrypted-case-log/releases/latest/download/app-encrypted-case-log-portable.exe">Windows .exe</a>
+        <a class="btn" href="https://github.com/drsamonline/app-encrypted-case-log/releases/latest/download/app-encrypted-case-log.apk">Android .apk</a>
+        <a class="btn" href="https://github.com/drsamonline/app-encrypted-case-log">Source</a>
+      </div>
+      <div class="badges">
+        <a href="https://drsamonline.github.io/app-encrypted-case-log/play/"><img src="assets/badge-live.svg" alt="Live: online"></a>
+        <img src="assets/badge-crypto.svg" alt="Crypto: AES-256-GCM">
+        <img src="assets/badge-offline.svg" alt="Offline: no network">
+        <img src="assets/badge-tests.svg" alt="Tests: 15 passing">
+        <img src="assets/badge-deps.svg" alt="Dependencies: 0 runtime">
+        <a href="https://github.com/drsamonline/app-encrypted-case-log/blob/main/LICENSE"><img src="assets/badge-licence.svg" alt="Licence: PolyForm Noncommercial 1.0.0"></a>
+      </div>
     </div>
-  </header>
 
-  <section>
-    <h2>What it does</h2>
-    <ul class="features">
-      <li><b>Offline</b><span>No server, no account, no tracking.</span></li>
-    </ul>
-  </section>
-<section><h2>A look at it</h2>
-    <figure><img src="shot.png" alt="Encrypted Case Log — screenshot" loading="lazy"></figure></section>
-  <section>
-    <h2>Three ways to run it</h2>
-    <div class="grid">
-      <div class="card"><h3>In the browser</h3><p>Open the <a href="https://drsamonline.github.io/app-encrypted-case-log/play/">live demo</a> — nothing to install.</p></div>
-      <div class="card"><h3>As an app</h3><p>The Windows <code>.exe</code> and the Android <code>.apk</code> are portable: no installer, no admin rights.</p></div>
-      <div class="card"><h3>From the source</h3><p>It is one HTML file. Download it, open it, done — there is no build step.</p></div>
-    </div>
-  </section>
-
-  <section>
-    <h2>Privacy</h2>
-    <p>Everything stays on your device. There is no server, no account, and the page
-    forbids outbound requests, so there is nowhere for your data to go. Composed from <code>case-kit</code>, <code>crypto-kit</code>, <code>export-kit</code>, <code>search-kit</code>, <code>web-kit</code>.</p>
-  </section>
-
-  <footer>
-    <p><b>Encrypted Case Log</b> — built by <a href="https://drsamonline.github.io/">Dr Sohil Momin</a>. PolyForm Noncommercial licensed.
-    Part of the <a href="https://drsamonline.github.io/">drsamonline</a> collection.</p>
-    <p><a href="https://github.com/drsamonline/app-encrypted-case-log/releases">All releases</a> · <a href="https://drsamonline.github.io/app-encrypted-case-log/play/">Live demo</a> · <a href="https://drsamonline.github.io/">All projects</a></p>
-  </footer>
+    <figure class="record" aria-label="Illustration of a paper case record with the identifying lines redacted">
+      <div class="head"><b>Case record</b><span>sealed</span></div>
+      <div class="rec-line w80"></div>
+      <div class="rec-redact"></div>
+      <div class="rec-line w90"></div>
+      <div class="rec-line w65"></div>
+      <div class="rec-redact alt"></div>
+      <div class="rec-line w80"></div>
+      <div class="rec-redact wide"></div>
+      <div class="rec-line w45"></div>
+      <figcaption class="mono">The label is initials or a code, never a name. What is written here
+      stays encrypted until you unlock it.</figcaption>
+      <div class="seal"><span><b>AES</b>256-GCM<br>on device</span></div>
+    </figure>
+  </div>
 </div>
+
+<section class="band">
+  <div class="wrap">
+    <p class="kicker">What it does</p>
+    <h2 class="display">A case file per patient, and nothing in the middle.</h2>
+    <p class="sub">Three things matter in a clinical log kept on a phone or a clinic laptop: it is
+    encrypted, it is there when the network is not, and it is yours to hand over.</p>
+    <div class="cards">
+      <div class="card">
+        <p class="num">01</p>
+        <h3>Encrypted at rest</h3>
+        <p>A random data key encrypts every record with a fresh 96-bit IV, and the record id travels
+        as the AAD — so a record cannot be swapped, replayed or silently replaced.</p>
+      </div>
+      <div class="card">
+        <p class="num">02</p>
+        <h3>Offline by construction</h3>
+        <p>One HTML file and five kits, no build step, no CDN, no dependency. The page forbids
+        outbound connections at the policy level, not by good intentions.</p>
+      </div>
+      <div class="card">
+        <p class="num">03</p>
+        <h3>Yours to hand over</h3>
+        <p>Export the encrypted <code>.ecl</code> archive, or a plaintext CSV behind a warning.
+        Import decrypts first, then reads it through the shared case interchange.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="demo" id="demo">
+  <div class="wrap">
+    <p class="kicker">The app, not a picture of it</p>
+    <h2 class="display">Try the real thing below.</h2>
+    <p class="sub">This is the shipped app in a frame, running against a sample vault held in memory —
+    nothing you do here is saved to your device. Move it to a view worth seeing:</p>
+
+    <div class="guide" role="group" aria-label="Jump the demo to a view">
+      <button type="button" data-route="patients" aria-pressed="true">The patient list</button>
+      <button type="button" data-route="note" aria-pressed="false">A note and its timeline</button>
+      <button type="button" data-route="search" aria-pressed="false">Search, decrypted in memory</button>
+      <button type="button" data-route="locked" aria-pressed="false">The lock screen</button>
+    </div>
+
+    <div class="frame-wrap" id="frameWrap">
+      <div class="chrome"><i></i><i></i><i></i><span class="url">drsamonline.github.io/app-encrypted-case-log/play/?demo=1</span></div>
+      <div class="poster-box">
+        <img class="poster" src="assets/poster.png" alt="Encrypted Case Log — the patient list with five records">
+        <iframe id="appFrame" src="play/index.html?demo=1#patients" title="Encrypted Case Log — live demo"
+                loading="lazy" referrerpolicy="no-referrer"></iframe>
+      </div>
+    </div>
+    <p class="frame-note">The frame loads only over http(s); if it cannot load, the screenshot behind it
+    stays put. <a href="play/index.html?demo=1" style="color:#d8ac5c">Open the demo on its own →</a></p>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap">
+    <p class="kicker">What it refuses to do</p>
+    <h2 class="display">The omissions are the design.</h2>
+    <p class="sub">Every one of these was left out on purpose. A clinical tool that adds any of them
+    stops being a tool you can carry into a room.</p>
+    <dl class="refuse">
+      <div><dt>No account</dt><dd>There is nobody to sign in to. The vault is a file in your browser's storage.</dd></div>
+      <div><dt>No sync, no cloud</dt><dd>Nothing is uploaded, so nothing can be breached, subpoenaed or leaked by a vendor.</dd></div>
+      <div><dt>No plaintext index</dt><dd>Search decrypts every record into memory on unlock and throws the index away on lock. It is why unlock is linear, and why the honest ceiling is about 50,000 records.</dd></div>
+      <div><dt>No passphrase reset</dt><dd>No server holds a key. Lose the passphrase and the recovery code and the data is unrecoverable — that is the guarantee, not an oversight.</dd></div>
+      <div><dt>No telemetry</dt><dd>The page carries <code>connect-src 'none'</code>. It could not phone home if it wanted to.</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section class="band" id="numbers">
+  <div class="wrap">
+    <p class="kicker">The numbers</p>
+    <h2 class="display">Small surface, checkable claims.</h2>
+    <p class="sub">Every figure here is printed by the app or its test suite, and the badges above are
+    generated from this repository — not fetched from an image service.</p>
+    <div class="nums">
+      <div><b class="mono">AES-256-GCM</b><span>per-record authenticated encryption</span></div>
+      <div><b class="mono">600,000</b><span>PBKDF2-HMAC-SHA256 iterations for the key-encryption key</span></div>
+      <div><b class="mono">96-bit</b><span>fresh IV on every write; the id is the AAD</span></div>
+      <div><b class="mono">24 words</b><span>recovery code, wrapping the same data key, shown once</span></div>
+      <div><b class="mono">15 / 15</b><span>self-tests, no browser needed</span></div>
+      <div><b class="mono">0</b><span>runtime dependencies, 0 build steps</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap two">
+    <div>
+      <p class="kicker">Where it comes from</p>
+      <h2 class="display">Five kits, composed.</h2>
+      <p class="sub" style="margin-bottom:0">The app re-implements none of them. Each is a single file
+      that works from <code>file://</code> and from Pages.</p>
+      <div class="kits">
+        <code>crypto-kit</code><code>case-kit</code><code>search-kit</code><code>export-kit</code><code>web-kit</code>
+      </div>
+      <p class="sub" style="margin-top:18px">A case is a <code>case-kit</code> case; a note is one of its
+      dated symptoms. That is what lets a record made here be read by the family of clinical apps.</p>
+    </div>
+    <div>
+      <p class="kicker">How to run it</p>
+      <h2 class="display">Three ways, no installer.</h2>
+      <p class="sub" style="margin-bottom:0">The Windows build and the APK are portable: no admin rights,
+      no setup wizard. In the browser it is a single page.</p>
+      <pre class="shell"><code>git clone https://github.com/drsamonline/app-encrypted-case-log
+cd app-encrypted-case-log
+node tests/self-tests.js        # 15 tests, no browser
+
+open docs/play/index.html       # the app itself
+open docs/play/index.html?demo=1#note   # the demo vault</code></pre>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <p style="margin:0 0 6px"><b>Encrypted Case Log</b> — built by
+        <a href="https://drsamonline.github.io/">Dr Sohil Momin</a>. PolyForm Noncommercial 1.0.0.</p>
+      <p style="margin:0">Part of the <a href="https://drsamonline.github.io/">drsamonline</a> collection.
+        <a href="https://github.com/drsamonline/app-encrypted-case-log/releases">Releases</a> ·
+        <a href="https://github.com/drsamonline/app-encrypted-case-log">Source</a> ·
+        <a href="https://drsamonline.github.io/app-encrypted-case-log/play/">Live app</a></p>
+    </div>
+    <p class="stamp" style="margin:0">build 2026-11-01</p>
+  </div>
+</footer>
+
+</main>
+
+<script>
+(function () {
+  var wrap = document.getElementById("frameWrap");
+  var frame = document.getElementById("appFrame");
+  var buttons = Array.prototype.slice.call(document.querySelectorAll(".guide button"));
+  var canFrame = location.protocol === "http:" || location.protocol === "https:";
+
+  /* A poster screenshot sits behind the frame and the frame is only revealed once it
+     has actually loaded, so a blocked or offline frame never looks like a broken app. */
+  if (!canFrame) { wrap.classList.remove("live"); }
+  frame.addEventListener("load", function () {
+    wrap.classList.add("live");
+    try { frame.contentWindow.location.hash = current(); } catch (e) {}
+  });
+
+  function current() {
+    var on = buttons.filter(function (b) { return b.getAttribute("aria-pressed") === "true"; })[0];
+    return (on && on.getAttribute("data-route")) || "patients";
+  }
+  function go(route) {
+    buttons.forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-route") === route)); });
+    if (!wrap.classList.contains("live")) {
+      frame.src = "play/index.html?demo=1#" + route;
+      return;
+    }
+    try { frame.contentWindow.location.hash = route; }
+    catch (e) { frame.src = "play/index.html?demo=1#" + route; }
+  }
+  buttons.forEach(function (b) {
+    b.addEventListener("click", function () { go(b.getAttribute("data-route")); });
+  });
+})();
+</script>
 </body>
 </html>
