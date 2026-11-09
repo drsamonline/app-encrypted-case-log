@@ -20,6 +20,9 @@ jobs:
       - name: Run the suite
         run: node tests/self-tests.js
 
+      - name: The crypto-kit contracts
+        run: node tests/crypto-kit.test.js
+
   # Attach SHA256SUMS.txt to the rolling release, so a download can be verified offline.
   #
   # This lives here, in the workflow that demonstrably runs on every push, rather than in
