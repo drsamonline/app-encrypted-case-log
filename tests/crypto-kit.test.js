@@ -21,14 +21,15 @@ function ok(name, cond, detail) {
 }
 
 (async () => {
-  // A rejected promise, not a thrown exception.
-  let rejected = false, threw = false;
-  try {
-    await CK.open(new Uint8Array([9, 0, 0, 0, 0]), 'pw');
-  } catch (e) {
-    if (e instanceof Error) rejected = true; else threw = true;
-  }
-  ok('a bad envelope version rejects', rejected && !threw);
+  // A rejected promise, not a thrown exception. The call itself must return a
+  // promise — awaiting inside a try would catch a synchronous throw just as
+  // happily, and pass.
+  let threw = false, promise = null;
+  try { promise = CK.open(new Uint8Array([9, 0, 0, 0, 0]), 'pw'); } catch (e) { threw = true; }
+  ok('a bad envelope version returns a promise', !threw && promise instanceof Promise);
+  let rejected = false;
+  if (promise && promise.catch) await promise.catch(() => { rejected = true; });
+  ok('and rejects rather than throwing', rejected && !threw);
 
   let rejectedShort = false;
   try { await CK.open(new Uint8Array(8), 'pw'); } catch (e) { rejectedShort = /envelope/.test(e.message); }
