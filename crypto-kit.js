@@ -42,10 +42,15 @@
     }
   };
 
+  // A salt, an IV or a one-time key that came from Math.random() is not a
+  // secret, it is a guess. Refusing is the only safe answer: a caller that
+  // reaches this without a CSPRNG has a bigger problem than a missing IV.
   CK.randomBytes = function (n) {
+    if (!(root.crypto && root.crypto.getRandomValues)) {
+      throw new Error("crypto-kit needs a secure context for random bytes; there is no CSPRNG here");
+    }
     var a = new Uint8Array(n);
-    if (root.crypto && root.crypto.getRandomValues) root.crypto.getRandomValues(a);
-    else for (var i = 0; i < n; i++) a[i] = Math.floor(Math.random() * 256);
+    root.crypto.getRandomValues(a);
     return a;
   };
 
@@ -108,17 +113,24 @@
       return out;
     });
   };
+  // Rejects rather than throws. Every other function here returns a promise, so
+  // a caller writes `CK.open(env, pw).catch(showWrongPassphrase)` — and a
+  // synchronous throw from a malformed envelope walked straight past that catch
+  // as an uncaught exception, taking the app's error path with it.
   CK.open = function (envelope, passphrase, opts) {
-    assertSecure();
     opts = opts || {};
-    if (envelope[0] !== 1) throw new Error("unknown envelope version");
-    var dv = new DataView(envelope.buffer, envelope.byteOffset, envelope.byteLength);
-    var iters = dv.getUint32(1);
-    var salt = envelope.slice(5, 5 + SALT);
-    var iv = envelope.slice(5 + SALT, HEAD);
-    var ct = envelope.slice(HEAD);
-    return CK.deriveKey(passphrase, salt, iters).then(function (key) {
-      return CK.decrypt(key, { iv: iv, ct: ct }, opts);
+    return Promise.resolve().then(function () {
+      assertSecure();
+      if (!envelope || envelope.length <= HEAD) throw new Error("not a sealed envelope");
+      if (envelope[0] !== 1) throw new Error("unknown envelope version");
+      var dv = new DataView(envelope.buffer, envelope.byteOffset, envelope.byteLength);
+      var iters = dv.getUint32(1);
+      var salt = envelope.slice(5, 5 + SALT);
+      var iv = envelope.slice(5 + SALT, HEAD);
+      var ct = envelope.slice(HEAD);
+      return CK.deriveKey(passphrase, salt, iters).then(function (key) {
+        return CK.decrypt(key, { iv: iv, ct: ct }, opts);
+      });
     });
   };
 
