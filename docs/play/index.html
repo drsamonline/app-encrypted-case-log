@@ -1707,6 +1707,10 @@ window.addEventListener("error", function () { window.__bootError = true; });
   input,textarea,select{border-radius:4px !important}
   .card,[class*="card"]{border-radius:8px !important}
   button:not(.ghost):not(.tab){background:var(--acc) !important}
+
+/* ---- a11y: the danger surface, both themes --------------------------------- */
+[data-theme="light"] button:not(.ghost){color:#ffffff!important}      /* 1.99 -> 8.5 on #981717 */
+[data-theme="dark"] button:not(.ghost){color:#2b0b0b!important}       /* 4.26 -> 4.57 on #cd5c5c */
 </style>
 </body>
 </html>
