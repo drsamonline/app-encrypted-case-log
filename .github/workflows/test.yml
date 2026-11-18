@@ -34,6 +34,14 @@ jobs:
   # The build runs on the same push, so this waits (bounded) until the release assets are
   # fresher than this run started. If the build fails, the wait times out and this job
   # fails — which is the signal you want.
+  #
+  # THE BOUND IS 30 MINUTES, NOT 15, and it is a measurement rather than a guess. On
+  # 2026-11-18 this job failed with "the release was not refreshed within 15 minutes"
+  # while the build was still running normally: it published at 08:55:38Z against a
+  # 08:37:24Z start — 18m14s, three minutes past a 15-minute bound. The wait was too
+  # short for the pipeline it guards, so it reported a broken build that was not broken.
+  # 30 minutes keeps a real hang detectable and stops a slow-but-healthy build from
+  # turning the workflow red.
   checksums:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -46,7 +54,7 @@ jobs:
       - name: Wait for this push's build to refresh the release
         run: |
           set -euo pipefail
-          deadline=$(( $(date +%s) + 900 ))
+          deadline=$(( $(date +%s) + 1800 ))
           while [ "$(date +%s)" -lt "$deadline" ]; do
             newest=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" \
                        --jq '[.assets[].updated_at] | max' 2>/dev/null || echo "")
@@ -60,7 +68,7 @@ jobs:
             echo "waiting for the build to publish new assets…"
             sleep 30
           done
-          echo "::error::the release was not refreshed within 15 minutes"
+          echo "::error::the release was not refreshed within 30 minutes (the build published nothing, or it failed — check the Build + deploy run for this commit)"
           exit 1
 
       - name: Download the release assets
